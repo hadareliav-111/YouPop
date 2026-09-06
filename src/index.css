@@ -1,0 +1,2060 @@
+/* ---------- Design tokens ---------- */
+/* Dark is the app's one and only appearance (not tied to system theme) —
+   every screen is built entirely on these tokens, so setting them once here
+   is what makes the dark look apply everywhere consistently, with no
+   light-mode flash since this is plain CSS present from first paint. */
+:root {
+  color-scheme: dark;
+  --color-bg: #121018;
+  --color-surface: #1c1926;
+  --color-surface-raised: #242030;
+  --color-border: #322c40;
+  --color-text: #f1eef7;
+  --color-text-muted: #a39cb3;
+  --color-primary: #e8739e;
+  --color-primary-hover: #dd5f8d;
+  --color-primary-contrast: #2f0f1f;
+  --color-danger: #e5484d;
+  --color-danger-hover: #cf3d42;
+  --color-star: #f5a524;
+  --color-rec: #ff8a5c;
+  --color-chip-bg: #2c2738;
+  --color-chip-text: #d8d2e8;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.55);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter,
+    Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* `overflow: hidden` on html/body alone doesn't reliably stop iOS Safari's
+   rubber-band drag — the page can still visibly shift under a touch drag
+   even though nothing actually overflows. `position: fixed` with `inset: 0`
+   pins the viewport in place regardless of touch gestures, which is the
+   standard technique for a genuinely fixed app shell (vs. a "page that
+   happens to not scroll right now"). Everything inside (#root, .app-shell)
+   still sizes itself to 100% of this fixed box normally. */
+html,
+body {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+}
+
+@media (min-width: 640px) {
+  /* The desktop-preview backdrop behind the phone bezel — always the dark
+     gradient now, matching the app's own always-dark appearance instead of
+     switching on system theme. */
+  body {
+    background: linear-gradient(160deg, #1c1926, #0d0b13);
+  }
+}
+
+#root {
+  height: 100%;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+}
+
+@media (min-width: 640px) {
+  #root {
+    align-items: center;
+  }
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+a {
+  color: var(--color-primary);
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+/* ---------- App shell: a fixed, phone-proportioned viewport ----------
+   On an actual phone this simply fills the screen. On a wider screen it
+   stays capped to phone-like proportions and is centered, framed like a
+   device, so testing on desktop shows accurately how it will feel on an
+   iPhone. The shell itself never scrolls (`overflow: hidden`) — every
+   screen inside is responsible for its own scrolling behavior (Home never
+   scrolls vertically at all; Category/Search screens scroll internally). */
+
+.app-shell {
+  /* Establishes a query container so any component that genuinely needs to
+     react to available width (see the header title rule below) measures
+     THIS box, not the browser window. Below `min-width:640px` this box IS
+     the browser viewport (real phone); above it, it's a much narrower
+     bezel-framed box on a wide desktop window — internal components must
+     never make layout decisions based on the browser's width, only this
+     container's, since the two can differ enormously on desktop. */
+  container-type: inline-size;
+  container-name: phone;
+
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+@media (min-width: 640px) {
+  .app-shell {
+    /* Real iPhone proportions (~9:19.5), not an independently-capped
+       width/height box — height drives the size and width is derived from
+       the ratio, so the frame is always genuinely phone-shaped. max-width
+       is only a fallback for the rare case of a very narrow but short
+       browser window, where width becomes the binding constraint instead
+       and height is recomputed from it via the same ratio. */
+    height: min(94dvh, 900px);
+    width: auto;
+    max-width: 100%;
+    aspect-ratio: 9 / 19.5;
+    /* A modest radius (not a literal device-sized one) — kept small enough
+       that, combined with the header's own padding, real content never
+       sits inside the rounded-corner clip region. */
+    border-radius: 28px;
+    border: 10px solid #0c0a12;
+    box-shadow: 0 30px 90px rgba(10, 8, 20, 0.45);
+  }
+}
+
+.config-banner {
+  flex: none;
+  background: rgba(245, 165, 36, 0.16);
+  color: #f0c675;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+/* Shared shell for pages other than Home (category & search): Home never
+   scrolls, but a full category grid or search results legitimately need
+   their own internal vertical scroll — contained within the phone frame. */
+.app-screen {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-screen__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.5rem 1rem 2rem;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.65rem 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+.btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.btn--secondary {
+  background: var(--color-chip-bg);
+  color: var(--color-chip-text);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+}
+.btn--ghost:hover {
+  color: var(--color-text);
+}
+
+.btn--danger {
+  background: var(--color-danger);
+  color: #fff;
+}
+.btn--danger:hover {
+  background: var(--color-danger-hover);
+}
+
+/* Understated secondary shortcut (currently Home's Watched button and the
+   friend-recommendation Watched actions) — dark fill, thin light outline,
+   light text, deliberately quieter than the solid pink/chip buttons next to
+   it. An inset box-shadow rather than a real `border` so this never adds
+   the 1-2px of extra box size a border would — same-sized siblings (e.g.
+   + Add) that use `border: none` stay pixel-identical in height/width. */
+.btn--outline {
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--color-text);
+}
+.btn--outline:hover:not(:disabled) {
+  background: var(--color-surface);
+}
+
+.btn--compact {
+  padding: 0.5rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+.btn--block {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 0.85rem 1.25rem;
+}
+
+.icon-btn {
+  position: relative;
+  background: transparent;
+  border: none;
+  font-size: 1.15rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.icon-btn__badge {
+  position: absolute;
+  top: 0.1rem;
+  right: 0.1rem;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  font-size: 0.58rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.icon-btn:hover,
+.icon-btn.is-active {
+  background: var(--color-chip-bg);
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.9rem;
+}
+
+.link-btn--danger {
+  color: var(--color-danger);
+}
+
+/* ---------- Header ---------- */
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--color-bg);
+  padding: max(0.85rem, env(safe-area-inset-top)) 1rem 0.5rem;
+}
+
+@media (min-width: 640px) {
+  /* Extra clearance so header content never sits inside the bezel's
+     rounded-corner clip region (a real device's rounded glass doesn't clip
+     app content — the OS handles that separately — but our CSS bezel is a
+     literal overflow:hidden + border-radius box, so content genuinely
+     needs physical space to clear the curve). Only needed when the bezel
+     itself is showing, i.e. the browser is wide enough to frame the phone. */
+  .app-header {
+    padding-top: 1.15rem;
+  }
+}
+
+.app-header__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+}
+
+.app-header__title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  flex: none;
+}
+
+@container phone (max-width: 360px) {
+  /* Correctly measures the app's own viewport width, not the browser's —
+     matters on both a genuinely narrow real phone and, in principle, a
+     narrowed desktop frame, whereas a `@media` query here would only ever
+     see the (often much wider) browser window. */
+  .app-header__title {
+    font-size: 1.05rem;
+  }
+}
+
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: none;
+}
+
+/* Scoped to the header only — Friends adds a 5th action here, so icons get
+   a bit more compact to keep the title's position/size and the header's
+   own height untouched. The global .icon-btn size (and its tap target)
+   everywhere else in the app, e.g. Delete on a detail screen, is
+   unaffected. */
+.app-header__actions .icon-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1rem;
+}
+
+.app-header__actions .btn--compact {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.82rem;
+}
+
+.app-header__search-row {
+  margin-top: 0.75rem;
+}
+
+/* ---------- Filter bar ---------- */
+
+.category-screen__filter-tabs {
+  flex: none;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem 0.9rem;
+  /* Scripted/Reality always fits without scrolling, but movie genres are
+     open-ended (however many the API actually returns), so this needs to
+     scroll rather than wrap or crowd the row once there are more than a
+     handful. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.category-screen__filter-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.reorder-hint {
+  padding: 0 0 0.6rem;
+  font-size: 0.8rem;
+}
+
+.filter-bar {
+  padding: 0.25rem 1rem 0.75rem;
+}
+
+.filter-bar__tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  scrollbar-width: none;
+}
+.filter-bar__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-tab {
+  flex: none;
+  background: var(--color-chip-bg);
+  color: var(--color-chip-text);
+  border: none;
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.filter-tab.is-active {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+
+.filter-tab--more {
+  margin-left: auto;
+}
+
+/* Kept secondary/compact and pushed to the far end of the filter row so it
+   never competes visually with the Not Watched/All toggle above the actual
+   recommendation rails. */
+.friends-recs__manage-btn {
+  margin-left: auto;
+  flex: none;
+  position: relative;
+}
+
+/* Same badge as the tab bar's — repositioned to pop just outside this
+   pill-shaped button's corner instead of overlapping its text, since the
+   default .icon-btn__badge inset assumes a small square icon button. */
+.friends-recs__manage-btn .icon-btn__badge {
+  top: -0.4rem;
+  right: -0.4rem;
+}
+
+.filter-panel {
+  margin-top: 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.filter-panel__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.filter-panel__field label {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.filter-panel__field select {
+  padding: 0.7rem 0.75rem;
+}
+
+.filter-panel__clear {
+  align-self: flex-start;
+}
+
+/* ---------- Watchlist grid & cards ---------- */
+
+.watchlist-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+}
+
+/* ---------- Manual reorder mode ---------- */
+
+.reorder-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+}
+
+.reorder-tile {
+  /* Grid items default to `min-width: auto`, which for a `white-space:
+     nowrap` descendant (the title below) resolves to that text's full
+     unwrapped width — regardless of its own overflow/ellipsis — and that
+     min-content width can force this tile's whole 1fr column wider than its
+     fair share, shrinking every other column in the row to fit. A single
+     long title was enough to make one poster balloon and the rest shrink.
+     min-width: 0 opts this tile out of that intrinsic-size contribution, so
+     all columns stay equal regardless of title length. */
+  min-width: 0;
+  touch-action: none;
+  -webkit-user-drag: none;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  user-select: none;
+  z-index: 1;
+}
+
+.reorder-tile:active {
+  cursor: grabbing;
+}
+
+.reorder-tile.is-dragging {
+  z-index: 10;
+  opacity: 0.9;
+}
+
+.reorder-tile.is-dragging .reorder-tile__poster {
+  box-shadow: 0 12px 28px rgba(10, 8, 20, 0.4);
+  outline: 3px solid var(--color-primary);
+  transform: scale(1.05);
+}
+
+.reorder-tile__poster {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--color-chip-bg);
+  box-shadow: var(--shadow-card);
+}
+
+.reorder-tile__poster--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+}
+
+.reorder-tile__title {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-card {
+  background: var(--color-surface);
+  border: none;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease;
+}
+
+.item-card:hover {
+  transform: translateY(-2px);
+}
+.item-card:active {
+  transform: scale(0.98);
+}
+
+/* The tappable poster+title area, wrapped in its own button so a sibling
+   "+ Add to Watchlist" button can sit in the same card without nesting two
+   buttons inside each other. */
+.item-card__hit {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.item-card__poster-wrap {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  background: var(--color-chip-bg);
+}
+
+.item-card__poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-card__poster--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+}
+
+.item-card__status-badge {
+  position: absolute;
+  left: 0.35rem;
+  bottom: 0.35rem;
+  max-width: calc(100% - 0.7rem);
+  background: rgba(20, 16, 32, 0.72);
+  color: #fff;
+  font-size: 0.5rem;
+  font-weight: 700;
+  padding: 0.18rem 0.4rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-card__status-badge--watched {
+  background: rgba(34, 160, 107, 0.85);
+}
+
+.item-card__status-badge--currently_watching {
+  background: rgba(232, 115, 158, 0.85);
+}
+
+.item-card__rec-badge {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  background: var(--color-rec);
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 0.2rem 0.4rem;
+  border-radius: 999px;
+}
+
+/* Same corner slot as the plain "★ Rec" star (the two never appear
+   together — this replaces it once a name is actually known), sized a
+   little more generously since it carries a name instead of one word, and
+   capped so a long name truncates instead of spilling over the poster. */
+.item-card__recommender-badge {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  max-width: calc(100% - 0.7rem);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+/* Same slot/treatment as .item-card__recommender-badge — never shown on
+   the same card (a friend's-recommendations card never has a recommender
+   badge, and vice versa), so reusing the corner is safe. */
+.item-card__new-badge {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.item-card__body {
+  padding: 0.45rem 0.4rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+}
+
+.item-card__title {
+  font-size: 0.74rem;
+  font-weight: 700;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+}
+
+.item-card__meta {
+  margin: 0;
+  font-size: 0.62rem;
+  color: var(--color-text-muted);
+}
+
+.item-card__genres {
+  margin: 0;
+  font-size: 0.58rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-card__coming {
+  margin: 0;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-card__footer {
+  margin-top: auto;
+  padding-top: 0.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem;
+  font-size: 0.6rem;
+}
+
+.item-card__rating {
+  color: var(--color-star);
+  font-weight: 700;
+}
+
+/* Compact, full-width pill under the title/meta — deliberately small so it
+   never competes with the poster for visual weight. */
+.item-card__watchlist-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0 0.4rem 0.5rem;
+}
+
+/* "+ Add to Watchlist" and "Watched" are two equivalent actions, so they
+   deliberately share one identical visual treatment (same size, same
+   colors) — nothing about either one should read as "selected" or
+   "primary" over the other. */
+.item-card__add-watchlist-btn,
+.item-card__watched-btn {
+  padding: 0.35rem 0.5rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-chip-bg);
+  color: var(--color-chip-text);
+  font-size: 0.62rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.item-card__add-watchlist-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---------- Error fallback ---------- */
+
+.error-fallback {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--color-text-muted);
+}
+
+.error-fallback__icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.error-fallback__title {
+  color: var(--color-text);
+  font-weight: 700;
+  margin: 0 0 0.35rem;
+}
+
+.error-fallback__message {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* ---------- Home screen: fixed, non-scrolling rail layout ---------- */
+
+.home-screen {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.home-screen__empty {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.home-rails {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* On a notched iPhone, the home-indicator bar and the display's own
+     rounded-corner glass both intrude on a strip along the very bottom
+     edge — the last rail's edge posters (the only ones that reach into the
+     actual bottom corners) sat inside that strip with only ~7px of padding
+     to spare, so their bottom corners really were being physically covered.
+     env(safe-area-inset-bottom) is exactly Apple's own measurement of that
+     strip, matching how the header already reserves safe-area-inset-top and
+     the modal reserves the same inset at its own bottom edge; on a
+     non-notched device or desktop it's 0, so nothing here changes size at
+     all — this never touches poster size directly, it only gives the rails
+     as a group very slightly less total height to divide on hardware that
+     truly needs it. */
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.poster-rail {
+  /* flex-basis: 0 (not the flex-grow default of `auto`) so every section
+     divides the available height purely by its grow ratio, regardless of
+     how much content it has — otherwise an empty section (one line of text)
+     would stay small while a poster-filled section dominates the space. */
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0.3rem 1rem 0.45rem;
+}
+
+/* A hairline rule between sections (not a card or container) is enough to
+   make the boundary unambiguous while staying flat and minimal — the first
+   section needs none, since the header above it already reads as the top
+   edge. */
+.poster-rail + .poster-rail {
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.7rem;
+}
+
+.poster-rail__header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+
+.poster-rail__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  /* Home's own rail titles ("Movies", "Currently Watching"...) never come
+     close to needing this, but Friends' "Recommendations from {name}"
+     titles can run long — this keeps a long one truncating gracefully
+     instead of overflowing past the "See all" button next to it. */
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.poster-rail__see-all {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  background: var(--color-chip-bg);
+  color: var(--color-primary);
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.poster-rail__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  /* Without snapping, a momentum swipe can settle mid-tile, leaving a
+     sliver of a poster hanging off the edge — which reads as "clipped."
+     `proximity` (not `mandatory`) only pulls the rest position to a full
+     tile when it's already close, so a deliberate slow drag can still stop
+     anywhere; it never fights the scroll or adds paging. Only the scroll
+     behavior changes here — tile size and the rail's own layout are
+     untouched. */
+  scroll-snap-type: x proximity;
+}
+
+.poster-rail__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.poster-rail__empty {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.85rem;
+}
+
+.poster-rail__empty-content p {
+  margin: 0 0 0.2rem;
+  font-size: 0.8rem;
+}
+
+.poster-rail__empty-content p:last-child {
+  margin-bottom: 0;
+}
+
+.rail-tile {
+  position: relative;
+  height: 100%;
+  aspect-ratio: 2 / 3;
+  flex: none;
+  border: none;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--color-chip-bg);
+  scroll-snap-align: start;
+}
+
+.rail-tile__poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.rail-tile__poster--placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+}
+
+.rail-tile__scrim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.5rem 0.35rem 0.3rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0));
+}
+
+.rail-tile__title {
+  margin: 0;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: left;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rail-tile__badge {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  max-width: calc(100% - 0.6rem);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 0.18rem 0.4rem;
+  border-radius: 999px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Category / Search screens ---------- */
+
+.screen-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.35rem 0.5rem;
+}
+
+@media (min-width: 640px) {
+  /* Same bezel corner-clearance reasoning as .app-header above. */
+  .screen-header {
+    padding-top: 1.15rem;
+  }
+}
+
+.screen-header__title {
+  flex: 1;
+  text-align: center;
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.screen-header__spacer {
+  width: 3.25rem;
+  flex: none;
+}
+
+.screen-header__right {
+  flex: none;
+  min-width: 3.25rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.back-btn {
+  width: 3.25rem;
+  height: 3.25rem;
+  font-size: 2.1rem;
+  line-height: 1;
+}
+
+.icon-btn--danger {
+  color: var(--color-danger);
+  font-size: 1.3rem;
+}
+
+/* ---------- Empty states ---------- */
+
+.empty-state {
+  text-align: center;
+  padding: 3.5rem 1.5rem;
+  color: var(--color-text-muted);
+}
+
+.empty-state__icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state__title {
+  color: var(--color-text);
+  font-size: 1.2rem;
+  margin: 0 0 0.4rem;
+}
+
+.empty-state__message {
+  margin: 0 0 1.25rem;
+}
+
+/* ---------- Modal ---------- */
+
+.modal-overlay {
+  /* Absolute (not fixed) so modals stay within the phone-frame viewport
+     on desktop instead of covering the entire browser window. */
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 8, 16, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+  padding: 0;
+}
+
+.modal {
+  background: var(--color-surface);
+  width: 100%;
+  max-width: 560px;
+  max-height: 92%;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-modal);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal--wide {
+  max-width: 640px;
+}
+
+/* ---------- Confirm dialog (centered, not a bottom sheet) ---------- */
+
+.confirm-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 8, 16, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: 1.5rem;
+}
+
+.confirm-dialog {
+  background: var(--color-surface);
+  width: 100%;
+  max-width: 320px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  padding: 1.25rem;
+}
+
+.confirm-dialog__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.confirm-dialog__message {
+  margin: 0 0 1.1rem;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.confirm-dialog__actions .btn {
+  flex: 1 1 0;
+}
+
+.modal__handle {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 0 0;
+  flex: none;
+}
+
+.modal__handle-bar {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-border);
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  flex: none;
+}
+
+.modal__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.modal__body {
+  padding: 1rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
+/* ---------- Search step (Add flow) ---------- */
+
+/* Same fixed-header/scrollable-body shape as .app-screen: the input row
+   never moves or unmounts (so the keyboard stays up) while results scroll
+   underneath it. */
+.search-step {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.search-step__input-row {
+  flex: none;
+  padding: 0.75rem 1rem 0.5rem;
+}
+
+.search-step__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 1rem 2rem;
+}
+
+.search-step__hint {
+  margin: 0 0 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.search-step__input {
+  width: 100%;
+  border-radius: 999px;
+}
+
+.search-step__status {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.search-step__status--error {
+  color: var(--color-danger);
+}
+
+.search-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.search-result {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+  background: var(--color-chip-bg);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem;
+  cursor: pointer;
+  text-align: left;
+}
+.search-result:hover {
+  background: var(--color-border);
+}
+
+.search-result__poster {
+  width: 46px;
+  height: 69px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex: none;
+  background: var(--color-surface);
+}
+
+.search-result__poster--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-result__info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.search-result__title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.search-result__meta {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.search-result__added-badge {
+  font-size: 0.7rem;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.search-result__mock-badge {
+  font-size: 0.7rem;
+  color: var(--color-rec);
+  font-weight: 600;
+}
+
+.details-form__mock-notice {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-rec);
+}
+
+.add-modal__notice {
+  text-align: center;
+  padding: 1.5rem 0.5rem;
+}
+
+/* ---------- Details form (add + edit) ---------- */
+
+.details-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.details-form__preview {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+
+.details-form__preview > div {
+  min-width: 0;
+}
+
+.details-form__poster {
+  width: 70px;
+  height: 105px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex: none;
+  background: var(--color-chip-bg);
+}
+
+.details-form__poster--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.details-form__title {
+  margin: 0 0 0.15rem;
+  font-weight: 700;
+}
+
+.details-form__meta {
+  margin: 0 0 0.15rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.details-form__genres {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.details-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.details-form__field legend {
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0;
+  margin-bottom: 0.4rem;
+}
+
+.details-form__field label {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.details-form__field input,
+.details-form__field textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.details-form__actions {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.6rem;
+  margin-top: 0.25rem;
+}
+
+.details-form__actions .btn {
+  width: 100%;
+}
+
+
+.segmented {
+  display: flex;
+  background: var(--color-chip-bg);
+  border-radius: 999px;
+  padding: 0.2rem;
+  gap: 0.2rem;
+  width: 100%;
+}
+
+.segmented__option {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-chip-text);
+  text-align: center;
+}
+
+.segmented__option.is-active {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+
+/* ---------- Tags ---------- */
+
+.tag-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tag-input__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tag-input__field {
+  width: 100%;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--color-chip-bg);
+  color: var(--color-chip-text);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.chip--provider {
+  background: var(--color-chip-bg);
+}
+
+.chip__remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  color: inherit;
+  padding: 0;
+}
+
+/* ---------- Item detail ---------- */
+
+.item-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.item-detail__hero {
+  display: flex;
+  gap: 1rem;
+}
+
+.item-detail__poster {
+  width: 120px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex: none;
+  background: var(--color-chip-bg);
+}
+
+.item-detail__poster--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.item-detail__hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.25rem;
+  min-width: 0;
+}
+
+.item-detail__meta {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.item-detail__genres {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.item-detail__coming {
+  margin: 0;
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.item-detail__rating {
+  margin: 0;
+  color: var(--color-star);
+  font-weight: 700;
+}
+
+.item-detail__ratings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+}
+
+.item-detail__rating-chip {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  background: var(--color-chip-bg);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+}
+
+.item-detail__rating-chip strong {
+  color: var(--color-text);
+}
+
+.item-detail__overview {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.92rem;
+}
+
+.item-detail__notes {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.92rem;
+  white-space: pre-wrap;
+}
+
+.item-detail__status {
+  font-weight: 600;
+  margin: 0 0 0.6rem;
+}
+
+.status-segmented {
+  margin-bottom: 0.75rem;
+}
+
+/* ---------- Episode progress & picker ---------- */
+
+.episode-progress {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.episode-progress__current,
+.episode-progress__next {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.episode-progress__badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-chip-bg);
+  color: var(--color-chip-text);
+}
+
+.episode-progress__badge--available {
+  background: rgba(34, 197, 122, 0.18);
+  color: #4ade80;
+}
+
+.episode-progress__badge--upcoming {
+  background: rgba(232, 115, 158, 0.15);
+  color: var(--color-primary);
+}
+
+.episode-picker {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.episode-picker__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.episode-picker__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.episode-picker__row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--color-chip-bg);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.episode-picker__row.is-current {
+  outline: 2px solid var(--color-primary);
+}
+
+.episode-picker__row-number {
+  font-weight: 700;
+  flex: none;
+}
+
+.episode-picker__row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.episode-picker__row-badge {
+  flex: none;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.item-detail__rating-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.detail-section {
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.detail-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.recommendation-detail__watchlist-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detail-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail-section__title {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin: 0 0 0.5rem;
+}
+
+.recommendation-box {
+  background: var(--color-chip-bg);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.9rem;
+}
+
+.recommendation-box p {
+  margin: 0 0 0.35rem;
+}
+.recommendation-box p:last-child {
+  margin-bottom: 0;
+}
+
+.recommend-chip {
+  display: inline-block;
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+}
+
+.recommendation-box__note {
+  margin-top: 0.5rem;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.detail-section--danger {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.delete-confirm {
+  background: rgba(229, 72, 77, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem;
+  width: 100%;
+}
+
+.delete-confirm p {
+  margin: 0 0 0.6rem;
+}
+
+.delete-confirm__actions {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.6rem;
+}
+
+.delete-confirm__actions .btn {
+  width: 100%;
+}
+
+
+/* ---------- Watch providers ---------- */
+
+.watch-providers__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.watch-providers__attribution {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* ---------- Star rating ---------- */
+
+.star-rating {
+  display: inline-flex;
+  gap: 0.15rem;
+}
+
+.star-rating__star {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: var(--color-border);
+  padding: 0;
+  line-height: 1;
+}
+
+.star-rating--sm .star-rating__star {
+  font-size: 1.05rem;
+}
+
+.star-rating__star.is-filled {
+  color: var(--color-star);
+}
+
+.star-rating--readonly .star-rating__star {
+  cursor: default;
+}
+
+/* ---------- Menu modal ---------- */
+
+.menu-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.menu-modal__usage-stat {
+  margin: 0 0 0.3rem;
+  font-size: 0.9rem;
+}
+
+
+.attribution {
+  font-size: 0.78rem;
+}
+
+/* ---------- Login screen ---------- */
+
+.login-screen {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  /* Anchored near the top (not vertically centered) so the form's position
+     is fixed relative to the top of the screen — the iOS keyboard only ever
+     covers the bottom portion of the viewport, so a top-anchored form (well
+     under half the screen's height) stays fully visible above it, instead
+     of a centered form having its lower half (the password field, the
+     submit button) pushed under the keyboard. */
+  align-items: flex-start;
+  justify-content: center;
+  padding: max(3rem, calc(env(safe-area-inset-top) + 2.5rem)) 1.5rem 1.5rem;
+  overflow: hidden;
+}
+
+.login-screen__form {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.login-screen__title {
+  margin: 0 0 0.5rem;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+/* ---------- Tab bar (Watchlist / My Recommendations) ---------- */
+
+.tab-bar {
+  flex: none;
+  display: flex;
+  border-top: 1px solid var(--color-border);
+  /* Same reasoning as .home-rails' own safe-area padding: on a notched
+     iPhone the home-indicator strip sits right under this bar. */
+  padding-bottom: max(0.4rem, env(safe-area-inset-bottom));
+}
+
+.tab-bar__tab {
+  flex: 1 1 0;
+  /* Without this, a flex item's default min-width is its content's
+     min-content width — a wide label could then force this tab wider than
+     the other two (breaking the equal three-way split). */
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  background: none;
+  border: none;
+  padding: 0.5rem 0.25rem 0.3rem;
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+
+/* Every tab's label is always exactly two explicit lines (see TabBar.tsx —
+   each word/phrase is its own <span>), never text that wraps on its own,
+   so all three tabs stay visually identical regardless of label length. */
+.tab-bar__label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+}
+
+.tab-bar__tab.is-active {
+  color: var(--color-primary);
+}
+
+.tab-bar__icon {
+  width: 1.3rem;
+  height: 1.3rem;
+  flex: none;
+}
+
+.tab-bar__icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.tab-bar__badge {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.5rem;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  font-size: 0.58rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* ---------- Friends ---------- */
+
+.friends-search {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.friends-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.friend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+}
+
+.friend-row + .friend-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.friend-row__name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.friend-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: none;
+}
+
+/* ---------- Friends' Recommendations rails ---------- */
+
+/* .poster-rail itself is designed to live inside a fixed-height flex
+   parent (Home divides one fixed screen height across three rails via
+   flex-grow). Here the rails sit in a normal *scrolling* list instead —
+   an unbounded, growing number of friends — so each one gets its own
+   fixed-height wrapper instead of sharing flex-grow, which gives
+   .poster-rail's internal flex chain (header, then a height:100% tile
+   row) something concrete to fill. .poster-rail itself is unmodified. */
+.friend-rec-rail {
+  height: 14.5rem;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.friend-rec-rail + .friend-rec-rail {
+  border-top: 1px solid var(--color-border);
+  margin-top: 0.3rem;
+  padding-top: 0.7rem;
+}

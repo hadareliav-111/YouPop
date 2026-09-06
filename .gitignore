@@ -1,0 +1,36 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Environment variables (Supabase project URL/anon key, feature flags).
+# .env.example is intentionally NOT ignored — it's a template with empty
+# values, meant to be committed so anyone setting up the project knows
+# which variables to fill in.
+.env
+.env.*
+!.env.example
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Claude Code local settings (machine-specific tool permissions, not
+# meant to be shared via the repo)
+.claude/settings.local.json
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
