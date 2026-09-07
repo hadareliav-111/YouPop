@@ -1,32 +1,24 @@
-# React + TypeScript + Vite
+# YouPop
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A personal watchlist app for movies, TV shows, and reality shows — track what
+you want to watch, rate what you've seen, and share recommendations with
+friends. Built with React, TypeScript, and Vite, backed by Supabase
+(Postgres + Auth + Row Level Security).
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. `npm install`
+2. Copy `.env.example` to `.env.local` and fill in your Supabase project's
+   `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (set
+   `VITE_OMDB_PROXY_ENABLED=true` once the `omdb-proxy` Edge Function is
+   deployed; movie search falls back to placeholder data until then).
+3. Run `supabase/schema.sql` once in your Supabase project's SQL Editor to
+   create the required tables, RLS policies, and functions.
+4. `npm run dev`
 
-## React Compiler
+## Scripts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+- `npm run dev` — start the Vite dev server
+- `npm run build` — type-check and build for production
+- `npm run lint` — run Oxlint
+- `npm run preview` — preview the production build locally
