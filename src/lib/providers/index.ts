@@ -3,6 +3,7 @@ import { tvmazeProvider, getEpisodes as tvmazeGetEpisodes, type TvmazeEpisode } 
 import { omdbProvider, isOmdbConfigured } from "./omdb";
 import { mockMovieProvider } from "./mockMovies";
 import { titleRelevance, RELEVANCE_TIERS } from "./relevance";
+import { withSearchCache } from "./searchCache";
 
 export type { SearchResultItem, FullDetails, MediaSource, TvSubtype } from "./types";
 export type { TvmazeEpisode } from "./tvmaze";
@@ -29,15 +30,15 @@ const providersById: Record<MediaSource, MediaProvider> = {
   "mock-movie": mockMovieProvider,
 };
 
-// In-memory, session-lifetime caches. These exist purely to avoid redundant
-// network calls (OMDb has a daily request cap) — they are NOT where saved
-// watchlist data lives; a saved item's full details are already copied onto
-// the WatchlistItem itself at add-time (see AddScreen), so reopening or
-// refreshing the app never re-fetches from any provider for existing items.
-// This only helps the rarer case of re-searching or re-selecting the same
-// title again within one session (e.g. reopening the Add modal, retyping a
-// query, or re-picking a result you didn't end up adding).
-const searchCache = new Map<string, SearchResultItem[]>();
+// In-memory, session-lifetime cache for details lookups. This exists purely
+// to avoid redundant network calls (OMDb has a daily request cap) — it is
+// NOT where saved watchlist data lives; a saved item's full details are
+// already copied onto the WatchlistItem itself at add-time (see AddScreen),
+// so reopening or refreshing the app never re-fetches from any provider for
+// existing items. This only helps the rarer case of re-selecting the same
+// title again within one session. Search results use the shared cache in
+// searchCache.ts instead, so a fallback variant tried internally (see
+// omdb.ts/searchHelpers.ts) and a direct top-level search share one cache.
 const detailsCache = new Map<string, FullDetails>();
 
 // Caps how many combined results we ever show. Providers (especially
@@ -50,18 +51,9 @@ export async function searchAll(
   query: string,
   signal?: AbortSignal,
 ): Promise<{ results: SearchResultItem[]; failedSources: MediaSource[] }> {
-  const normalized = query.trim().toLowerCase();
   const entries = Object.values(providersByType);
   const settled = await Promise.allSettled(
-    entries.map((p) => {
-      const cacheKey = `${p.id}::${normalized}`;
-      const cached = searchCache.get(cacheKey);
-      if (cached) return Promise.resolve(cached);
-      return p.search(query, signal).then((r) => {
-        searchCache.set(cacheKey, r);
-        return r;
-      });
-    }),
+    entries.map((p) => withSearchCache(p.id, query, () => p.search(query, signal))),
   );
 
   const results: SearchResultItem[] = [];
@@ -77,16 +69,22 @@ export async function searchAll(
 
   // Score every result by how closely its title actually matches the query
   // (see relevance.ts for the tier scheme), drop anything with no real
-  // relation at all, and use each provider's own confidence score as a
-  // tie-breaker within an identical tier (e.g. TVmaze's fuzzy score ranks
-  // "Friends" (1994) above a same-tier but less-likely alternate).
+  // relation at all, then break ties — never override the relevance tier
+  // itself — first by each provider's own confidence score (e.g. TVmaze's
+  // fuzzy score ranks "Friends" (1994) above a same-tier but less-likely
+  // alternate), then by release year, newest first. Year only ever decides
+  // between two results the tier/provider-score comparisons couldn't
+  // already separate, so a clearly better title match never loses to a
+  // merely newer one.
   const scored = results
     .map((r) => ({ item: r, score: titleRelevance(r.title, query) }))
     .filter((r) => r.score > RELEVANCE_TIERS.NONE);
 
   scored.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
-    return (b.item.providerScore ?? 0) - (a.item.providerScore ?? 0);
+    const providerDiff = (b.item.providerScore ?? 0) - (a.item.providerScore ?? 0);
+    if (providerDiff !== 0) return providerDiff;
+    return (b.item.year ?? 0) - (a.item.year ?? 0);
   });
 
   return {

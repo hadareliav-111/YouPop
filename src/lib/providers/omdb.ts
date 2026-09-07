@@ -10,6 +10,7 @@
 import type { ExternalRating, FullDetails, MediaProvider, SearchResultItem } from "./types";
 import { ProviderRequestError } from "./types";
 import { searchWithTypoFallback } from "./searchHelpers";
+import { withSearchCache } from "./searchCache";
 import { supabase } from "../supabaseClient";
 
 // Purely a local on/off switch for this environment (mock data vs. the
@@ -164,14 +165,20 @@ async function literalSearch(
 }
 
 // OMDb's own search has no fuzzy tolerance at all (verified directly — see
-// searchHelpers.ts) so a typo'd query gets a transposition-based retry on a
-// zero-result miss rather than a general fuzzy-matching layer.
+// searchHelpers.ts) so a partial/typo'd query gets a small, bounded set of
+// fallback variants tried on a zero-result miss, rather than a general
+// fuzzy-matching layer. Every variant attempt (not just the user's literal
+// query) goes through the shared search cache — this app-wide daily OMDb
+// quota is exactly why a variant tried once, for any query, is never
+// re-fetched from OMDb again for the rest of the session.
 function search(
   query: string,
   signal?: AbortSignal,
 ): Promise<SearchResultItem[]> {
   if (!query.trim()) return Promise.resolve([]);
-  return searchWithTypoFallback(query, (q) => literalSearch(q, signal));
+  return searchWithTypoFallback(query, (q) =>
+    withSearchCache("omdb", q, () => literalSearch(q, signal)),
+  );
 }
 
 async function getDetails(
