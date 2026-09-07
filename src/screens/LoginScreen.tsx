@@ -25,7 +25,7 @@ export function LoginScreen({ onSignIn }: LoginScreenProps) {
   return (
     <div className="login-screen">
       <form className="login-screen__form" onSubmit={handleSubmit}>
-        <h1 className="login-screen__title">My Watchlist</h1>
+        <h1 className="login-screen__title">Ready to Pop?</h1>
 
         <div className="details-form__field">
           <label htmlFor="login-username">Username</label>

@@ -9,6 +9,7 @@ import { RecommendationsScreen } from "./screens/RecommendationsScreen";
 import { AddRecommendationScreen } from "./screens/AddRecommendationScreen";
 import { RecommendationDetailScreen } from "./screens/RecommendationDetailScreen";
 import { FriendsScreen } from "./screens/FriendsScreen";
+import { AddFriendScreen } from "./screens/AddFriendScreen";
 import { FriendsRecommendationsScreen } from "./screens/FriendsRecommendationsScreen";
 import { FriendRecommendationsScreen } from "./screens/FriendRecommendationsScreen";
 import { FriendVisibilityScreen } from "./screens/FriendVisibilityScreen";
@@ -41,6 +42,7 @@ type Screen =
   | { kind: "recommendation-sharing"; id: string }
   | { kind: "recommendation-note"; id: string }
   | { kind: "friends" }
+  | { kind: "add-friend" }
   | { kind: "friends-recommendations" }
   | { kind: "friend-recommendations"; friendId: string }
   | { kind: "friend-recommendation-detail"; id: string }
@@ -381,11 +383,10 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
         {screen.kind === "friends" && (
           <FriendsScreen
             onBack={popScreen}
+            onOpenAddFriend={() => pushScreen({ kind: "add-friend" })}
             incomingRequests={incomingRequests}
             outgoingRequests={outgoingRequests}
             friends={friends}
-            searchByUsername={searchByUsername}
-            sendRequest={sendFriendRequest}
             acceptRequest={acceptFriendRequest}
             declineRequest={declineFriendRequest}
             cancelRequest={cancelFriendRequest}
@@ -395,6 +396,16 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
             onOpenFriendSharing={(friend) =>
               pushScreen({ kind: "friend-visibility", friendshipId: friend.friendshipId })
             }
+          />
+        )}
+
+        {screen.kind === "add-friend" && (
+          <AddFriendScreen
+            onBack={popScreen}
+            searchByUsername={searchByUsername}
+            sendRequest={sendFriendRequest}
+            acceptRequest={acceptFriendRequest}
+            cancelRequest={cancelFriendRequest}
           />
         )}
 

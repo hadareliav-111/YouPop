@@ -253,6 +253,21 @@ a {
   background: var(--color-danger-hover);
 }
 
+/* A quieter destructive action (Remove Friend) that still needs to sit
+   directly next to a same-shaped non-destructive button (Manage
+   Recommendations) and look like part of the same group — same pill
+   shape/padding as .btn--secondary, just tinted red instead of neutral,
+   rather than the loud solid .btn--danger fill or a plain text link.
+   Same rgba(--color-danger) surface .delete-confirm already uses for a
+   low-emphasis "this is destructive" hint. */
+.btn--danger-subtle {
+  background: rgba(229, 72, 77, 0.08);
+  color: var(--color-danger);
+}
+.btn--danger-subtle:hover:not(:disabled) {
+  background: rgba(229, 72, 77, 0.14);
+}
+
 /* Understated secondary shortcut (currently Home's Watched button and the
    friend-recommendation Watched actions) — dark fill, thin light outline,
    light text, deliberately quieter than the solid pink/chip buttons next to
@@ -1494,13 +1509,13 @@ a {
 }
 
 /* Shared by FriendVisibilityScreen's one-friendship-at-a-time checklist
-   (a plain single-column list of recommendation titles) and
-   ShareWithFriendsPicker's own friend grid below — same simple
-   checkbox + text row either way, just in a 1- or 2-column layout.
-   min-width: 0 here is the same fix as .reorder-tile above: as a grid
-   item, this row's automatic minimum size would otherwise be based on
-   its nowrap name text's full min-content width, which can force its
-   1fr column wider than its fair share of a cramped 2-column cell. */
+   (recommendation titles) and ShareWithFriendsPicker's friend checklist
+   (friend names) — same simple checkbox + text row either way, both in
+   the same 2-column grid below. min-width: 0 here is the same fix as
+   .reorder-tile above: as a grid item, this row's automatic minimum
+   size would otherwise be based on its nowrap text's full min-content
+   width, which can force its 1fr column wider than its fair share of a
+   cramped 2-column cell. */
 .audience-picker__friend-row {
   display: flex;
   align-items: center;
@@ -1512,9 +1527,10 @@ a {
 
 /* Two columns make far better use of the fixed phone width than a single
    stacked list, and the bounded max-height + own scroll is what keeps a
-   long friend list from pushing the rest of the Add Recommendation form
-   (and its Save button) off screen — only this grid ever scrolls
-   internally, never the whole page. */
+   long list from pushing the rest of the screen (Save button on the
+   Add/Sharing flows, Select All/Clear All on FriendVisibilityScreen) off
+   screen — only this grid ever scrolls internally, never the whole
+   page. */
 .audience-picker__friend-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2160,22 +2176,54 @@ a {
   flex: none;
 }
 
-.friend-row__name-btn {
-  display: flex;
-  flex: 1 1 auto;
+/* Friends list row only: two short-label actions (Manage / Remove)
+   sitting beside the name. Small compact pills, not the app's standard
+   .btn--compact size, but ordinary single-line buttons — "Manage" and
+   "Remove" are short enough that they never need to wrap. */
+.friend-row__actions--compact {
+  gap: 0.4rem;
+}
+
+.friend-row__actions--compact .btn {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+/* Friends list row only: the recommendation count must always be fully
+   visible on one line, never truncated — putting it on its own
+   full-width line below the name+actions row (rather than squeezed
+   beside the action buttons, which an earlier version of this row
+   tried and had to keep fighting for space) means it always has the
+   entire row's width available, so it never has to compete with
+   anything for room. */
+.friend-row--v2 {
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15rem;
-  background: none;
-  border: none;
-  padding: 0;
+  align-items: stretch;
+  gap: 0.3rem;
+}
+
+.friend-row__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   min-width: 0;
-  text-align: left;
-  cursor: pointer;
+}
+
+/* Scoped to .friend-row__top specifically (not the base .friend-row__name
+   rule, which other friend-row usages — the search result and pending
+   request rows — also rely on) — flex: 1 1 auto + min-width: 0 is what
+   lets the name actually shrink/ellipsis here now that it shares its
+   line with the two action buttons, instead of pushing them off. */
+.friend-row__top .friend-row__name {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .friend-row__sharing {
   font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 /* ---------- Friends' Recommendations rails ---------- */

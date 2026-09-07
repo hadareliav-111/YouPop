@@ -1,16 +1,15 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { EmptyState } from "../components/EmptyState";
-import type { FriendEntry, SearchResult } from "../hooks/useFriends";
+import type { FriendEntry } from "../hooks/useFriends";
 
 interface FriendsScreenProps {
   onBack: () => void;
+  onOpenAddFriend: () => void;
   incomingRequests: FriendEntry[];
   outgoingRequests: FriendEntry[];
   friends: FriendEntry[];
-  searchByUsername: (username: string) => Promise<SearchResult>;
-  sendRequest: (targetId: string, targetUsername: string) => void;
   acceptRequest: (friendshipId: string) => void;
   declineRequest: (friendshipId: string) => void;
   cancelRequest: (friendshipId: string) => void;
@@ -25,11 +24,10 @@ interface FriendsScreenProps {
 
 export function FriendsScreen({
   onBack,
+  onOpenAddFriend,
   incomingRequests,
   outgoingRequests,
   friends,
-  searchByUsername,
-  sendRequest,
   acceptRequest,
   declineRequest,
   cancelRequest,
@@ -38,113 +36,55 @@ export function FriendsScreen({
   visibleCountFor,
   onOpenFriendSharing,
 }: FriendsScreenProps) {
-  const [query, setQuery] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [result, setResult] = useState<SearchResult | null>(null);
-  const [searchMessage, setSearchMessage] = useState<string | null>(null);
   const [removingFriend, setRemovingFriend] = useState<FriendEntry | null>(null);
-
-  const runSearch = async (e: FormEvent) => {
-    e.preventDefault();
-    const trimmed = query.trim();
-    if (!trimmed) return;
-    setSearching(true);
-    setSearchMessage(null);
-    setResult(null);
-    try {
-      const res = await searchByUsername(trimmed);
-      if (res.status === "not_found") {
-        setSearchMessage(`No user found with username "${trimmed}".`);
-      } else if (res.status === "self") {
-        setSearchMessage("You can't add yourself.");
-      } else {
-        setResult(res);
-      }
-    } catch {
-      setSearchMessage("Couldn't search right now. Please try again.");
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const handleAdd = () => {
-    if (!result || result.status !== "none") return;
-    sendRequest(result.userId, result.username);
-    setSearchMessage(`Request sent to ${result.username}.`);
-    setResult(null);
-    setQuery("");
-  };
-
-  const handleAcceptFromSearch = () => {
-    if (!result || result.status !== "incoming") return;
-    acceptRequest(result.friendshipId);
-    setSearchMessage(`You and ${result.username} are now friends.`);
-    setResult(null);
-    setQuery("");
-  };
-
-  const handleCancelFromSearch = () => {
-    if (!result || result.status !== "outgoing") return;
-    cancelRequest(result.friendshipId);
-    setResult(null);
-    setQuery("");
-  };
 
   return (
     <div className="app-screen">
-      <ScreenHeader title="Friends" onBack={onBack} />
+      <ScreenHeader
+        title="Friends"
+        onBack={onBack}
+        right={
+          <button type="button" className="btn btn--primary btn--compact" onClick={onOpenAddFriend}>
+            + Add Friend
+          </button>
+        }
+      />
 
       <div className="app-screen__scroll">
         <section className="detail-section">
-          <h3 className="detail-section__title">Add a friend</h3>
-          <form className="friends-search" onSubmit={runSearch}>
-            <input
-              type="text"
-              dir="auto"
-              autoCapitalize="none"
-              autoCorrect="off"
-              placeholder="Enter exact username"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+          {friends.length === 0 ? (
+            <EmptyState
+              icon="👥"
+              title="No friends yet"
+              message="Search for a friend by their exact username to get started."
             />
-            <button type="submit" className="btn btn--primary btn--compact" disabled={searching}>
-              {searching ? "Searching…" : "Search"}
-            </button>
-          </form>
-
-          {searchMessage && <p className="text-muted">{searchMessage}</p>}
-
-          {result && result.status !== "not_found" && result.status !== "self" && (
-            <div className="friend-row">
-              <span className="friend-row__name">{result.username}</span>
-              {result.status === "none" && (
-                <button type="button" className="btn btn--secondary btn--compact" onClick={handleAdd}>
-                  Add Friend
-                </button>
-              )}
-              {result.status === "outgoing" && (
-                <div className="friend-row__actions">
-                  <span className="text-muted">Requested</span>
-                  <button
-                    type="button"
-                    className="btn btn--ghost btn--compact"
-                    onClick={handleCancelFromSearch}
-                  >
-                    Cancel
-                  </button>
+          ) : (
+            friends.map((friend) => (
+              <div className="friend-row friend-row--v2" key={friend.friendshipId}>
+                <div className="friend-row__top">
+                  <span className="friend-row__name">{friend.username}</span>
+                  <div className="friend-row__actions friend-row__actions--compact">
+                    <button
+                      type="button"
+                      className="btn btn--secondary btn--compact"
+                      onClick={() => onOpenFriendSharing(friend)}
+                    >
+                      Manage
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--danger-subtle btn--compact"
+                      onClick={() => setRemovingFriend(friend)}
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
-              )}
-              {result.status === "incoming" && (
-                <button
-                  type="button"
-                  className="btn btn--primary btn--compact"
-                  onClick={handleAcceptFromSearch}
-                >
-                  Accept
-                </button>
-              )}
-              {result.status === "friends" && <span className="text-muted">Friends</span>}
-            </div>
+                <span className="friend-row__sharing text-muted">
+                  {visibleCountFor(friend.friendshipId)} of {totalRecommendations} recommendations shared
+                </span>
+              </div>
+            ))
           )}
         </section>
 
@@ -173,55 +113,24 @@ export function FriendsScreen({
               </div>
             ))}
             {outgoingRequests.map((req) => (
-              <div className="friend-row" key={req.friendshipId}>
-                <span className="friend-row__name">{req.username}</span>
-                <div className="friend-row__actions">
-                  <span className="text-muted">Requested</span>
-                  <button
-                    type="button"
-                    className="btn btn--ghost btn--compact"
-                    onClick={() => cancelRequest(req.friendshipId)}
-                  >
-                    Cancel
-                  </button>
+              <div className="friend-row friend-row--v2" key={req.friendshipId}>
+                <div className="friend-row__top">
+                  <span className="friend-row__name">{req.username}</span>
+                  <div className="friend-row__actions friend-row__actions--compact">
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--compact"
+                      onClick={() => cancelRequest(req.friendshipId)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
+                <span className="friend-row__sharing text-muted">Requested</span>
               </div>
             ))}
           </section>
         )}
-
-        <section className="detail-section">
-          <h3 className="detail-section__title">Friends</h3>
-          {friends.length === 0 ? (
-            <EmptyState
-              icon="👥"
-              title="No friends yet"
-              message="Search for a friend by their exact username to get started."
-            />
-          ) : (
-            friends.map((friend) => (
-              <div className="friend-row" key={friend.friendshipId}>
-                <button
-                  type="button"
-                  className="friend-row__name-btn"
-                  onClick={() => onOpenFriendSharing(friend)}
-                >
-                  <span className="friend-row__name">{friend.username}</span>
-                  <span className="friend-row__sharing text-muted">
-                    {visibleCountFor(friend.friendshipId)} of {totalRecommendations} recommendations shared
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="btn btn--ghost btn--compact"
-                  onClick={() => setRemovingFriend(friend)}
-                >
-                  Remove Friend
-                </button>
-              </div>
-            ))
-          )}
-        </section>
       </div>
 
       {removingFriend && (

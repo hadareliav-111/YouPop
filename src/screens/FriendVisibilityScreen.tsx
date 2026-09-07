@@ -45,25 +45,28 @@ export function FriendVisibilityScreen({
             <p className="text-muted">
               {visibleCount} of {sorted.length} shared
             </p>
-            <div className="audience-picker__actions">
-              <button type="button" className="link-btn" onClick={onSelectAll}>
-                Select All
-              </button>
-              <button type="button" className="link-btn" onClick={onClearAll}>
-                Clear All
-              </button>
-            </div>
             <div className="audience-picker__friends">
-              {sorted.map((rec) => (
-                <label className="audience-picker__friend-row" key={rec.id}>
-                  <input
-                    type="checkbox"
-                    checked={isVisible(rec.id)}
-                    onChange={(e) => onToggle(rec.id, e.target.checked)}
-                  />
-                  {rec.title}
-                </label>
-              ))}
+              <div className="audience-picker__actions">
+                <button type="button" className="link-btn" onClick={onSelectAll}>
+                  Select All
+                </button>
+                <button type="button" className="link-btn" onClick={onClearAll}>
+                  Clear All
+                </button>
+              </div>
+              <div className="audience-picker__friend-grid">
+                {sorted.map((rec) => (
+                  <label className="audience-picker__friend-row" key={rec.id}>
+                    <input
+                      type="checkbox"
+                      className="audience-picker__friend-checkbox"
+                      checked={isVisible(rec.id)}
+                      onChange={(e) => onToggle(rec.id, e.target.checked)}
+                    />
+                    <span className="audience-picker__friend-name">{rec.title}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </>
         )}
