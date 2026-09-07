@@ -9,9 +9,10 @@ friends. Built with React, TypeScript, and Vite, backed by Supabase
 
 1. `npm install`
 2. Copy `.env.example` to `.env.local` and fill in your Supabase project's
-   `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (set
-   `VITE_OMDB_PROXY_ENABLED=true` once the `omdb-proxy` Edge Function is
-   deployed; movie search falls back to placeholder data until then).
+   `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Movie search falls back
+   to placeholder data until the OMDb proxy is set up: deploy the Edge
+   Function with `supabase functions deploy omdb-proxy`, set its
+   `OMDB_API_KEY` secret, then set `VITE_OMDB_PROXY_ENABLED=true`.
 3. Run `supabase/schema.sql` once in your Supabase project's SQL Editor to
    create the required tables, RLS policies, and functions.
 4. `npm run dev`
