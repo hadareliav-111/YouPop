@@ -26,6 +26,7 @@ interface RecommendationRow {
   note: string | null;
   sort_order: number;
   date_added: string;
+  audience: Recommendation["audience"];
 }
 
 export interface FriendRecommendation extends Recommendation {
@@ -51,6 +52,7 @@ function fromRow(row: RecommendationRow): FriendRecommendation {
     note: row.note,
     sortOrder: row.sort_order,
     dateAdded: row.date_added,
+    audience: row.audience,
   };
 }
 

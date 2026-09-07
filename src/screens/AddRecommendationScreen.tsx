@@ -10,11 +10,16 @@ import type { Recommendation } from "../types";
 import { mediaTypeLabel } from "../lib/mediaTypeLabel";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { SearchStep } from "../components/AddFlow/SearchStep";
+import { ShareWithFriendsPicker, type AudienceMode } from "../components/ShareWithFriendsPicker";
+import type { FriendEntry } from "../hooks/useFriends";
 
 interface AddRecommendationScreenProps {
   onClose: () => void;
-  onAdd: (rec: Recommendation) => void;
+  // hiddenFriendshipIds is [] for "All friends" — the caller only needs to
+  // persist an audience when it's non-empty.
+  onAdd: (rec: Recommendation, hiddenFriendshipIds: string[]) => void;
   alreadyRecommended: (source: MediaSource, externalId: string) => boolean;
+  friends: FriendEntry[];
 }
 
 type Step =
@@ -32,9 +37,31 @@ export function AddRecommendationScreen({
   onClose,
   onAdd,
   alreadyRecommended,
+  friends,
 }: AddRecommendationScreenProps) {
   const [step, setStep] = useState<Step>({ kind: "search" });
   const [note, setNote] = useState("");
+  const [audienceMode, setAudienceMode] = useState<AudienceMode>("all");
+  const [checkedFriendshipIds, setCheckedFriendshipIds] = useState<Set<string>>(new Set());
+
+  const handleModeChange = (mode: AudienceMode) => {
+    // Switching *into* "Selected friends" always starts from a blank
+    // checklist — an explicit choice each time, not a pre-filled one.
+    // "Select All" is one tap away for the "everyone but one" case.
+    if (mode === "selected" && audienceMode !== "selected") {
+      setCheckedFriendshipIds(new Set());
+    }
+    setAudienceMode(mode);
+  };
+
+  const handleToggleFriend = (friendshipId: string) => {
+    setCheckedFriendshipIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(friendshipId)) next.delete(friendshipId);
+      else next.add(friendshipId);
+      return next;
+    });
+  };
 
   const handleSelect = async (result: SearchResultItem) => {
     if (alreadyRecommended(result.source, result.externalId)) {
@@ -82,8 +109,15 @@ export function AddRecommendationScreen({
       note: note.trim() ? note.trim() : null,
       sortOrder: 0, // useRecommendations.addRecommendation assigns the real end-of-list position
       dateAdded: new Date().toISOString(),
+      audience: audienceMode,
     };
-    onAdd(rec);
+    const hiddenFriendshipIds =
+      audienceMode === "all"
+        ? []
+        : friends
+            .map((f) => f.friendshipId)
+            .filter((id) => !checkedFriendshipIds.has(id));
+    onAdd(rec, hiddenFriendshipIds);
     onClose();
   };
 
@@ -187,6 +221,16 @@ export function AddRecommendationScreen({
                 placeholder="Why are you recommending this?"
               />
             </div>
+
+            <ShareWithFriendsPicker
+              friends={friends}
+              mode={audienceMode}
+              checkedFriendshipIds={checkedFriendshipIds}
+              onModeChange={handleModeChange}
+              onToggleFriend={handleToggleFriend}
+              onSelectAll={() => setCheckedFriendshipIds(new Set(friends.map((f) => f.friendshipId)))}
+              onClearAll={() => setCheckedFriendshipIds(new Set())}
+            />
 
             <div className="details-form__actions">
               <button

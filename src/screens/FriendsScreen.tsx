@@ -15,6 +15,12 @@ interface FriendsScreenProps {
   declineRequest: (friendshipId: string) => void;
   cancelRequest: (friendshipId: string) => void;
   removeFriend: (friendshipId: string) => void;
+  // How many of the current user's own recommendations exist in total, and
+  // how many a given friend can currently see of them — drives the "shared
+  // with" count and the tap-through to manage that friend's access.
+  totalRecommendations: number;
+  visibleCountFor: (friendshipId: string) => number;
+  onOpenFriendSharing: (friend: FriendEntry) => void;
 }
 
 export function FriendsScreen({
@@ -28,6 +34,9 @@ export function FriendsScreen({
   declineRequest,
   cancelRequest,
   removeFriend,
+  totalRecommendations,
+  visibleCountFor,
+  onOpenFriendSharing,
 }: FriendsScreenProps) {
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
@@ -192,7 +201,16 @@ export function FriendsScreen({
           ) : (
             friends.map((friend) => (
               <div className="friend-row" key={friend.friendshipId}>
-                <span className="friend-row__name">{friend.username}</span>
+                <button
+                  type="button"
+                  className="friend-row__name-btn"
+                  onClick={() => onOpenFriendSharing(friend)}
+                >
+                  <span className="friend-row__name">{friend.username}</span>
+                  <span className="friend-row__sharing text-muted">
+                    {visibleCountFor(friend.friendshipId)} of {totalRecommendations} recommendations shared
+                  </span>
+                </button>
                 <button
                   type="button"
                   className="btn btn--ghost btn--compact"

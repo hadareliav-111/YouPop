@@ -1441,7 +1441,17 @@ a {
   font-size: 0.85rem;
 }
 
-.details-form__field input,
+/* :not([type="checkbox"]) matters: this was meant to size text inputs
+   and textareas to fill their field's width, but with a bare `input`
+   selector it was also — unintentionally — forcing every checkbox
+   nested in a .details-form__field (e.g. the audience picker's friend
+   checkboxes) to width: 100%, at higher specificity than
+   .audience-picker__friend-checkbox's own width: 1.05rem. That's what
+   was actually collapsing each friend row's name text to 0px width:
+   the checkbox itself was silently stretching to fill the entire row,
+   leaving zero space for the name span to grow into — not a color or
+   flex-sizing problem on the name span at all. */
+.details-form__field input:not([type="checkbox"]),
 .details-form__field textarea {
   width: 100%;
   resize: vertical;
@@ -1456,6 +1466,119 @@ a {
 
 .details-form__actions .btn {
   width: 100%;
+}
+
+/* ---------- Recommendation sharing (audience picker) ----------
+   The mode toggle reuses .segmented/.segmented__option as-is (same pill
+   control as "Is this a recommendation?" elsewhere) — no picker-specific
+   CSS needed for it. */
+
+.audience-picker__hint {
+  margin: 0.5rem 0 0;
+}
+
+.audience-picker__friends {
+  margin-top: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Deliberately understated — .btn--ghost, not the solid chip/pill
+   buttons — so these read as secondary actions under the segmented
+   control above, not as two more prominent controls competing with it. */
+.audience-picker__actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.15rem;
+}
+
+/* Shared by FriendVisibilityScreen's one-friendship-at-a-time checklist
+   (a plain single-column list of recommendation titles) and
+   ShareWithFriendsPicker's own friend grid below — same simple
+   checkbox + text row either way, just in a 1- or 2-column layout.
+   min-width: 0 here is the same fix as .reorder-tile above: as a grid
+   item, this row's automatic minimum size would otherwise be based on
+   its nowrap name text's full min-content width, which can force its
+   1fr column wider than its fair share of a cramped 2-column cell. */
+.audience-picker__friend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.3rem 0;
+  min-width: 0;
+  cursor: pointer;
+}
+
+/* Two columns make far better use of the fixed phone width than a single
+   stacked list, and the bounded max-height + own scroll is what keeps a
+   long friend list from pushing the rest of the Add Recommendation form
+   (and its Save button) off screen — only this grid ever scrolls
+   internally, never the whole page. */
+.audience-picker__friend-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.15rem 0.75rem;
+  max-height: 12rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.15rem;
+}
+
+/* Still a real checkbox (native semantics/state via :checked), but drawn
+   with appearance: none rather than accent-color — accent-color only
+   lets a native checkbox's fill and its browser-drawn checkmark share
+   one color, with no separate CSS hook for the checkmark alone, and the
+   design calls for a pink fill with a black checkmark specifically. */
+.audience-picker__friend-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
+  /* The base input/textarea/select rule's 0.6rem/0.75rem padding
+     (meant for text fields) still applies here otherwise — with
+     box-sizing: border-box, padding that size alone exceeds this box's
+     whole 1.05rem width, so the browser is forced to grow past it,
+     silently overriding width/height entirely. */
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  position: relative;
+}
+
+.audience-picker__friend-checkbox:checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.audience-picker__friend-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 0.28rem;
+  height: 0.5rem;
+  border: solid #000;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* flex: 1 1 0% claims the row's leftover space after the fixed-size
+   checkbox (rather than sitting at its own natural content width) and,
+   combined with min-width: 0, lets a name too long for that space
+   ellipsis-truncate within it instead of forcing the row wider. */
+.audience-picker__friend-name {
+  flex: 1 1 0%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  color: var(--color-text);
 }
 
 
@@ -2035,6 +2158,24 @@ a {
   align-items: center;
   gap: 0.5rem;
   flex: none;
+}
+
+.friend-row__name-btn {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  background: none;
+  border: none;
+  padding: 0;
+  min-width: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.friend-row__sharing {
+  font-size: 0.78rem;
 }
 
 /* ---------- Friends' Recommendations rails ---------- */

@@ -121,6 +121,15 @@ export interface Recommendation {
   // way yet.
   sortOrder: number;
   dateAdded: string; // ISO timestamp
+  // Explicit, stored sharing mode — "all" means every current *and
+  // future* accepted friend; "selected" means only the friendships with
+  // no row in recommendation_hidden_friends. Deliberately a real column,
+  // not inferred from whether any hidden-friend rows exist: a "selected"
+  // recommendation with every current friend individually checked has
+  // zero hidden rows too, which would be indistinguishable from "all"
+  // (and would wrongly grant a later-added friend access) if this were
+  // inferred instead of stored.
+  audience: "all" | "selected";
 }
 
 // Shape used while the user is building a new recommendation, before it's

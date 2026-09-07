@@ -24,6 +24,7 @@ interface RecommendationRow {
   note: string | null;
   sort_order: number;
   date_added: string;
+  audience: Recommendation["audience"];
 }
 
 function fromRow(row: RecommendationRow): Recommendation {
@@ -44,6 +45,7 @@ function fromRow(row: RecommendationRow): Recommendation {
     note: row.note,
     sortOrder: row.sort_order,
     dateAdded: row.date_added,
+    audience: row.audience,
   };
 }
 
@@ -66,6 +68,7 @@ function toRow(rec: Recommendation, userId: string) {
     note: rec.note,
     sort_order: rec.sortOrder,
     date_added: rec.dateAdded,
+    audience: rec.audience,
   };
 }
 

@@ -37,12 +37,19 @@ export function useRecommendations(userId: string | null) {
   }, [userId]);
 
   const addRecommendation = useCallback(
-    (rec: Recommendation) => {
+    // onPersisted (optional) fires only once the insert has actually
+    // committed — used by the sharing feature to write this
+    // recommendation's audience only after its row exists, avoiding a
+    // foreign-key race against recommendation_hidden_friends.
+    (rec: Recommendation, onPersisted?: () => void) => {
       const maxOrder = items.reduce((max, r) => Math.max(max, r.sortOrder), -1);
       const withOrder = { ...rec, sortOrder: maxOrder + 1 };
       setItems((prev) => [withOrder, ...prev]);
       if (userId) {
-        recommendationsApi.insertOne(userId, withOrder).catch(console.error);
+        recommendationsApi
+          .insertOne(userId, withOrder)
+          .then(() => onPersisted?.())
+          .catch(console.error);
       }
     },
     [items, userId],
@@ -85,6 +92,17 @@ export function useRecommendations(userId: string | null) {
     [userId],
   );
 
+  // Local-only optimistic sync, no persistence of its own — the actual
+  // write goes through the sharing RPC (useRecommendationSharing.
+  // setAudience, which sets both recommendations.audience and the
+  // hidden-friend rows atomically in one call). This just keeps this
+  // hook's own cached copy of the recommendation in sync after that call
+  // succeeds, the same way the object passed to addRecommendation already
+  // carries the right audience from the moment it's created.
+  const setAudienceLocal = useCallback((id: string, audience: Recommendation["audience"]) => {
+    setItems((prev) => prev.map((r) => (r.id === id ? { ...r, audience } : r)));
+  }, []);
+
   const alreadyRecommended = useCallback(
     (source: string, externalId: string) =>
       items.some((r) => r.externalSource === source && r.externalId === externalId),
@@ -99,5 +117,6 @@ export function useRecommendations(userId: string | null) {
     deleteRecommendation,
     reorder,
     alreadyRecommended,
+    setAudienceLocal,
   };
 }

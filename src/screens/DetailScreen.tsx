@@ -9,6 +9,9 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { StarRating } from "../components/StarRating";
 import { TagInput } from "../components/TagInput";
 import { EpisodePicker } from "../components/ItemDetail/EpisodePicker";
+import { Modal } from "../components/Modal";
+import { ShareWithFriendsPicker, type AudienceMode } from "../components/ShareWithFriendsPicker";
+import type { FriendEntry } from "../hooks/useFriends";
 
 const STATUS_LABEL: Record<WatchlistItem["status"], string> = {
   want_to_watch: "Want to watch",
@@ -28,7 +31,12 @@ interface DetailScreenProps {
   onSetRating: (rating: number | null) => void;
   onDelete: () => void;
   isRecommended: boolean;
-  onAddToRecommendations: () => void;
+  // hiddenFriendshipIds is [] for "All friends" — same audience-choice
+  // contract as AddRecommendationScreen's onAdd. audience is passed
+  // alongside it (not derived from hiddenFriendshipIds' length) since the
+  // caller needs to store the explicit mode, not infer it.
+  onAddToRecommendations: (audience: AudienceMode, hiddenFriendshipIds: string[]) => void;
+  friends: FriendEntry[];
 }
 
 // Full page rather than a bottom-sheet modal, per the same reasoning as
@@ -48,10 +56,54 @@ export function DetailScreen({
   onDelete,
   isRecommended,
   onAddToRecommendations,
+  friends,
 }: DetailScreenProps) {
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  // "+ Add to Recommendations" audience choice — same {all|selected}
+  // picker and contract as AddRecommendationScreen, just reached from a
+  // Modal instead of being inline in a form, since this action starts from
+  // a single button rather than a multi-step Add flow.
+  const [audienceModalOpen, setAudienceModalOpen] = useState(false);
+  const [audienceMode, setAudienceMode] = useState<AudienceMode>("all");
+  const [checkedFriendshipIds, setCheckedFriendshipIds] = useState<Set<string>>(new Set());
+
+  const handleAddToRecommendationsClick = () => {
+    if (friends.length === 0) {
+      onAddToRecommendations("all", []);
+      return;
+    }
+    setAudienceMode("all");
+    setCheckedFriendshipIds(new Set());
+    setAudienceModalOpen(true);
+  };
+
+  const handleAudienceModeChange = (mode: AudienceMode) => {
+    if (mode === "selected" && audienceMode !== "selected") {
+      setCheckedFriendshipIds(new Set());
+    }
+    setAudienceMode(mode);
+  };
+
+  const handleToggleAudienceFriend = (friendshipId: string) => {
+    setCheckedFriendshipIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(friendshipId)) next.delete(friendshipId);
+      else next.add(friendshipId);
+      return next;
+    });
+  };
+
+  const confirmAddToRecommendations = () => {
+    const hiddenFriendshipIds =
+      audienceMode === "all"
+        ? []
+        : friends.map((f) => f.friendshipId).filter((id) => !checkedFriendshipIds.has(id));
+    onAddToRecommendations(audienceMode, hiddenFriendshipIds);
+    setAudienceModalOpen(false);
+  };
   const [episodes, setEpisodes] = useState<TvmazeEpisode[]>([]);
   const [episodesLoading, setEpisodesLoading] = useState(false);
 
@@ -202,7 +254,7 @@ export function DetailScreen({
               <button
                 type="button"
                 className="btn btn--secondary btn--block"
-                onClick={onAddToRecommendations}
+                onClick={handleAddToRecommendationsClick}
                 disabled={isRecommended}
               >
                 {isRecommended ? "✓ In Recommendations" : "+ Add to Recommendations"}
@@ -490,6 +542,34 @@ export function DetailScreen({
           onCancel={() => setConfirmingDelete(false)}
           onConfirm={onDelete}
         />
+      )}
+
+      {audienceModalOpen && (
+        <Modal title="Recommend to" onClose={() => setAudienceModalOpen(false)}>
+          <div className="details-form">
+            <ShareWithFriendsPicker
+              friends={friends}
+              mode={audienceMode}
+              checkedFriendshipIds={checkedFriendshipIds}
+              onModeChange={handleAudienceModeChange}
+              onToggleFriend={handleToggleAudienceFriend}
+              onSelectAll={() => setCheckedFriendshipIds(new Set(friends.map((f) => f.friendshipId)))}
+              onClearAll={() => setCheckedFriendshipIds(new Set())}
+            />
+            <div className="details-form__actions">
+              <button
+                type="button"
+                className="btn btn--ghost"
+                onClick={() => setAudienceModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button type="button" className="btn btn--primary" onClick={confirmAddToRecommendations}>
+                Add Recommendation
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

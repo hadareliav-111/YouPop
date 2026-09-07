@@ -11,6 +11,9 @@ import { RecommendationDetailScreen } from "./screens/RecommendationDetailScreen
 import { FriendsScreen } from "./screens/FriendsScreen";
 import { FriendsRecommendationsScreen } from "./screens/FriendsRecommendationsScreen";
 import { FriendRecommendationsScreen } from "./screens/FriendRecommendationsScreen";
+import { FriendVisibilityScreen } from "./screens/FriendVisibilityScreen";
+import { RecommendationSharingScreen } from "./screens/RecommendationSharingScreen";
+import { RecommendationNoteScreen } from "./screens/RecommendationNoteScreen";
 import { MenuModal } from "./components/MenuModal";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAuth } from "./hooks/useAuth";
@@ -18,6 +21,7 @@ import { useWatchlist } from "./hooks/useWatchlist";
 import { useRecommendations } from "./hooks/useRecommendations";
 import { useFriends } from "./hooks/useFriends";
 import { useFriendsRecommendations } from "./hooks/useFriendsRecommendations";
+import { useRecommendationSharing } from "./hooks/useRecommendationSharing";
 import { supabase } from "./lib/supabaseClient";
 import { usingMockMovieData } from "./lib/providers";
 import { v4 as uuid } from "./lib/uuid";
@@ -34,10 +38,13 @@ type Screen =
   | { kind: "recommendations" }
   | { kind: "add-recommendation" }
   | { kind: "recommendation-detail"; id: string }
+  | { kind: "recommendation-sharing"; id: string }
+  | { kind: "recommendation-note"; id: string }
   | { kind: "friends" }
   | { kind: "friends-recommendations" }
   | { kind: "friend-recommendations"; friendId: string }
-  | { kind: "friend-recommendation-detail"; id: string };
+  | { kind: "friend-recommendation-detail"; id: string }
+  | { kind: "friend-visibility"; friendshipId: string };
 
 export default function App() {
   const { user, loading: authLoading, signIn, signOut } = useAuth();
@@ -82,6 +89,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
     deleteRecommendation,
     reorder: reorderRecommendations,
     alreadyRecommended,
+    setAudienceLocal: setRecommendationAudienceLocal,
   } = useRecommendations(userId);
 
   const {
@@ -101,6 +109,14 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
     userId,
     friends,
   );
+
+  const {
+    hiddenFor: hiddenFriendshipIdsFor,
+    visibleCountFor,
+    setAudience: setRecommendationAudience,
+    setVisibility: setRecommendationVisibility,
+    setAllVisibilityForFriendship,
+  } = useRecommendationSharing(userId, recommendations, friends);
 
   const [displayName, setDisplayName] = useState<string | null>(null);
 
@@ -163,6 +179,16 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
       ? recommendations.find((r) => r.id === screen.id) ?? null
       : null;
 
+  const selectedRecommendationForSharing =
+    screen.kind === "recommendation-sharing"
+      ? recommendations.find((r) => r.id === screen.id) ?? null
+      : null;
+
+  const selectedRecommendationForNote =
+    screen.kind === "recommendation-note"
+      ? recommendations.find((r) => r.id === screen.id) ?? null
+      : null;
+
   const selectedFriendGroup =
     screen.kind === "friend-recommendations"
       ? groupedByFriend.find((g) => g.friendUserId === screen.friendId) ?? null
@@ -179,6 +205,11 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
     ? groupedByFriend.find((g) => g.friendUserId === selectedFriendRecommendation.friendUserId)
         ?.username ?? ""
     : "";
+
+  const selectedFriendForVisibility =
+    screen.kind === "friend-visibility"
+      ? friends.find((f) => f.friendshipId === screen.friendshipId) ?? null
+      : null;
 
   // Shared by every place Phase 2C/2D offers a friend-recommendation-backed
   // Watchlist action ("+ Add to Watchlist" and "Watched", both on the
@@ -304,8 +335,9 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
                 selectedItem.externalSource,
                 selectedItem.externalId,
               )}
-              onAddToRecommendations={() =>
-                addRecommendation({
+              friends={friends}
+              onAddToRecommendations={(audienceMode, hiddenFriendshipIds) => {
+                const rec = {
                   id: uuid(),
                   externalId: selectedItem.externalId,
                   externalSource: selectedItem.externalSource,
@@ -322,8 +354,14 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
                   note: null,
                   sortOrder: 0,
                   dateAdded: new Date().toISOString(),
-                })
-              }
+                  audience: audienceMode,
+                };
+                addRecommendation(rec, () => {
+                  if (audienceMode === "selected") {
+                    setRecommendationAudience(rec.id, "selected", hiddenFriendshipIds).catch(console.error);
+                  }
+                });
+              }}
             />
           </ErrorBoundary>
         )}
@@ -352,6 +390,27 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
             declineRequest={declineFriendRequest}
             cancelRequest={cancelFriendRequest}
             removeFriend={removeFriend}
+            totalRecommendations={recommendations.length}
+            visibleCountFor={visibleCountFor}
+            onOpenFriendSharing={(friend) =>
+              pushScreen({ kind: "friend-visibility", friendshipId: friend.friendshipId })
+            }
+          />
+        )}
+
+        {screen.kind === "friend-visibility" && selectedFriendForVisibility && (
+          <FriendVisibilityScreen
+            username={selectedFriendForVisibility.username}
+            recommendations={recommendations}
+            isVisible={(recId) =>
+              !hiddenFriendshipIdsFor(recId).has(selectedFriendForVisibility.friendshipId)
+            }
+            onToggle={(recId, visible) =>
+              setRecommendationVisibility(recId, selectedFriendForVisibility.friendshipId, visible)
+            }
+            onSelectAll={() => setAllVisibilityForFriendship(selectedFriendForVisibility.friendshipId, true)}
+            onClearAll={() => setAllVisibilityForFriendship(selectedFriendForVisibility.friendshipId, false)}
+            onBack={popScreen}
           />
         )}
 
@@ -415,8 +474,15 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
         {screen.kind === "add-recommendation" && (
           <AddRecommendationScreen
             onClose={popScreen}
-            onAdd={addRecommendation}
+            onAdd={(rec, hiddenFriendshipIds) => {
+              addRecommendation(rec, () => {
+                if (rec.audience === "selected") {
+                  setRecommendationAudience(rec.id, "selected", hiddenFriendshipIds).catch(console.error);
+                }
+              });
+            }}
             alreadyRecommended={alreadyRecommended}
+            friends={friends}
           />
         )}
 
@@ -425,13 +491,45 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
             <RecommendationDetailScreen
               recommendation={selectedRecommendation}
               onBack={popScreen}
-              onUpdateNote={(note) => updateRecommendationNote(selectedRecommendation.id, note)}
+              onEditNote={() =>
+                pushScreen({ kind: "recommendation-note", id: selectedRecommendation.id })
+              }
               onDelete={() => {
                 deleteRecommendation(selectedRecommendation.id);
                 popScreen();
               }}
+              friends={friends}
+              hiddenFriendshipIds={hiddenFriendshipIdsFor(selectedRecommendation.id)}
+              onEditSharing={() =>
+                pushScreen({ kind: "recommendation-sharing", id: selectedRecommendation.id })
+              }
             />
           </ErrorBoundary>
+        )}
+
+        {screen.kind === "recommendation-note" && selectedRecommendationForNote && (
+          <RecommendationNoteScreen
+            note={selectedRecommendationForNote.note}
+            onBack={popScreen}
+            onSave={(note) => {
+              updateRecommendationNote(selectedRecommendationForNote.id, note);
+              popScreen();
+            }}
+          />
+        )}
+
+        {screen.kind === "recommendation-sharing" && selectedRecommendationForSharing && (
+          <RecommendationSharingScreen
+            friends={friends}
+            audience={selectedRecommendationForSharing.audience}
+            hiddenFriendshipIds={hiddenFriendshipIdsFor(selectedRecommendationForSharing.id)}
+            onBack={popScreen}
+            onSave={async (audience, hiddenFriendshipIds) => {
+              await setRecommendationAudience(selectedRecommendationForSharing.id, audience, hiddenFriendshipIds);
+              setRecommendationAudienceLocal(selectedRecommendationForSharing.id, audience);
+              popScreen();
+            }}
+          />
         )}
       </ErrorBoundary>
 

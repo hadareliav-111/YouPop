@@ -3,12 +3,16 @@ import type { Recommendation, WatchStatus } from "../types";
 import { mediaTypeLabel } from "../lib/mediaTypeLabel";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import type { FriendEntry } from "../hooks/useFriends";
 
 interface RecommendationDetailScreenProps {
   recommendation: Recommendation;
   onBack: () => void;
-  onUpdateNote?: (note: string | null) => void;
   onDelete?: () => void;
+  // Editing itself happens on a separate pushed screen
+  // (RecommendationNoteScreen) — onEditNote just triggers that
+  // navigation, same pattern as onEditSharing below.
+  onEditNote?: () => void;
   // True when viewing a friend's recommendation via Friends' Recommendations
   // — there's nothing to edit or delete on someone else's row (RLS would
   // reject it anyway), so those affordances are simply not offered.
@@ -21,6 +25,15 @@ interface RecommendationDetailScreenProps {
   watchlistStatus?: WatchStatus | null;
   onAddToWatchlist?: () => void;
   onMarkWatched?: () => void;
+  // Sharing controls — only ever passed for the user's own Recommendations
+  // (never together with readOnly), so the "Shared with" section is simply
+  // absent everywhere else. Editing itself happens on a separate pushed
+  // screen (RecommendationSharingScreen) — onEditSharing just triggers
+  // that navigation, keeping this page's own height fixed regardless of
+  // friend-list length.
+  friends?: FriendEntry[];
+  hiddenFriendshipIds?: Set<string>;
+  onEditSharing?: () => void;
 }
 
 // Reuses the same visual language as the Watchlist's DetailScreen (same
@@ -32,26 +45,20 @@ interface RecommendationDetailScreenProps {
 export function RecommendationDetailScreen({
   recommendation,
   onBack,
-  onUpdateNote,
   onDelete,
+  onEditNote,
   readOnly = false,
   watchlistStatus,
   onAddToWatchlist,
   onMarkWatched,
+  friends,
+  hiddenFriendshipIds,
+  onEditSharing,
 }: RecommendationDetailScreenProps) {
-  const [editingNote, setEditingNote] = useState(false);
-  const [draftNote, setDraftNote] = useState(recommendation.note ?? "");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const startEditing = () => {
-    setDraftNote(recommendation.note ?? "");
-    setEditingNote(true);
-  };
-
-  const saveNote = () => {
-    onUpdateNote?.(draftNote.trim() ? draftNote.trim() : null);
-    setEditingNote(false);
-  };
+  const showSharing = !readOnly && friends && friends.length > 0 && onEditSharing;
+  const currentHidden = hiddenFriendshipIds ?? new Set<string>();
 
   return (
     <div className="app-screen">
@@ -150,46 +157,45 @@ export function RecommendationDetailScreen({
           <section className="detail-section">
             <div className="detail-section__header">
               <h3 className="detail-section__title">Note</h3>
-              {!readOnly && !editingNote && (
-                <button type="button" className="link-btn" onClick={startEditing}>
+              {!readOnly && onEditNote && (
+                <button type="button" className="link-btn" onClick={onEditNote}>
                   Edit
                 </button>
               )}
             </div>
 
-            {!editingNote &&
-              (recommendation.note ? (
-                <p className="item-detail__notes">{recommendation.note}</p>
-              ) : (
-                <p className="text-muted">No note yet.</p>
-              ))}
-
-            {editingNote && (
-              <div className="details-form">
-                <div className="details-form__field">
-                  <textarea
-                    dir="auto"
-                    rows={3}
-                    value={draftNote}
-                    onChange={(e) => setDraftNote(e.target.value)}
-                    placeholder="Why are you recommending this?"
-                  />
-                </div>
-                <div className="details-form__actions">
-                  <button
-                    type="button"
-                    className="btn btn--ghost"
-                    onClick={() => setEditingNote(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button type="button" className="btn btn--primary" onClick={saveNote}>
-                    Save
-                  </button>
-                </div>
-              </div>
+            {recommendation.note ? (
+              <p className="item-detail__notes">{recommendation.note}</p>
+            ) : (
+              <p className="text-muted">No note yet.</p>
             )}
           </section>
+
+          {showSharing && (
+            <section className="detail-section">
+              <div className="detail-section__header">
+                <h3 className="detail-section__title">Shared with</h3>
+                <button type="button" className="link-btn" onClick={onEditSharing}>
+                  Edit
+                </button>
+              </div>
+
+              <p className="text-muted">
+                {recommendation.audience === "all"
+                  ? "All friends"
+                  : (friends ?? [])
+                      .filter((f) => !currentHidden.has(f.friendshipId))
+                      .map((f) => f.username)
+                      .join(", ") || "No one"}
+              </p>
+
+              {recommendation.audience === "all" && (
+                <p className="text-muted audience-picker__hint">
+                  New friends will automatically see this recommendation.
+                </p>
+              )}
+            </section>
+          )}
         </div>
       </div>
 
