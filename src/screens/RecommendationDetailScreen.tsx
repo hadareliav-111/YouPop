@@ -3,6 +3,7 @@ import type { Recommendation, WatchStatus } from "../types";
 import { mediaTypeLabel } from "../lib/mediaTypeLabel";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { WhereToWatch } from "../components/WhereToWatch";
 import type { FriendEntry } from "../hooks/useFriends";
 
 interface RecommendationDetailScreenProps {
@@ -113,6 +114,10 @@ export function RecommendationDetailScreen({
                   <p className="item-detail__rating">★ {recommendation.externalRating.toFixed(1)}</p>
                 )
               )}
+              <WhereToWatch
+                externalSource={recommendation.externalSource}
+                externalId={recommendation.externalId}
+              />
             </div>
           </div>
 

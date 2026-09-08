@@ -671,6 +671,42 @@ begin
 end;
 $$;
 
+-- ---------- where_to_watch_cache: shared "Where to Watch" (Israel) cache ----------
+-- One row per (external_source, external_id, country) — the exact same
+-- identifier pair every WatchlistItem/Recommendation already carries, so
+-- this needs no new column on either of those tables and works for
+-- content saved before this feature existed. Deliberately shared across
+-- every user, not scoped by user_id at all: streaming availability is a
+-- fact about the title, identical for every viewer, so one cached answer
+-- serves everyone rather than each user paying for their own lookup.
+-- `country` is included (not hardcoded away) even though only 'il' is
+-- ever written today, so a second country later needs no schema change.
+-- A row with an empty streaming_options array is just as valid a cached
+-- answer as a populated one — "we checked, nothing streams this in
+-- Israel" — which is exactly what stops a title genuinely unavailable
+-- here from being re-queried on every visit. Only ever written by the
+-- motn-proxy Edge Function, via its service-role connection (which
+-- bypasses RLS entirely) — there is deliberately no INSERT/UPDATE/DELETE
+-- policy for regular users, so no client can ever poison this shared
+-- cache with fake availability data, only read it.
+create table public.where_to_watch_cache (
+  external_source text not null check (external_source in ('tvmaze','omdb','mock-movie')),
+  external_id text not null,
+  country text not null default 'il',
+  streaming_options jsonb not null default '[]',
+  fetched_at timestamptz not null default now(),
+  primary key (external_source, external_id, country)
+);
+
+alter table public.where_to_watch_cache enable row level security;
+
+-- Not scoped to any particular user, same reasoning as omdb_usage above —
+-- this is intentionally one shared answer every signed-in user sees
+-- identically.
+create policy "Any signed-in user can view cached availability"
+  on public.where_to_watch_cache for select
+  using (true);
+
 -- ---------- required table grants ----------
 -- Row Level Security only decides which *rows* a query can see once it's
 -- already allowed to touch the table at all — Postgres still requires the
@@ -718,3 +754,15 @@ grant execute on function public.find_user_by_username(text) to authenticated;
 grant select, insert on public.recommendation_views to authenticated;
 grant select on public.omdb_usage to authenticated;
 grant execute on function public.increment_omdb_usage() to service_role;
+-- Deliberately select-only for authenticated — no insert/update/delete
+-- grant there at all, so writes can only ever happen via motn-proxy's
+-- service-role connection (see the table's own comment above).
+grant select on public.where_to_watch_cache to authenticated;
+-- Explicit grant, not assumed: unlike every other privileged write in
+-- this schema (which goes through a SECURITY DEFINER function, e.g.
+-- increment_omdb_usage() — see its own comment above for why that
+-- sidesteps this entirely), motn-proxy writes to this table as a raw
+-- upsert from the service-role client itself, so service_role needs its
+-- own explicit privilege here rather than inheriting one through a
+-- function owner.
+grant insert, update on public.where_to_watch_cache to service_role;

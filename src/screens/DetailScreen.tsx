@@ -10,6 +10,7 @@ import { StarRating } from "../components/StarRating";
 import { TagInput } from "../components/TagInput";
 import { EpisodePicker } from "../components/ItemDetail/EpisodePicker";
 import { Modal } from "../components/Modal";
+import { WhereToWatch } from "../components/WhereToWatch";
 import { ShareWithFriendsPicker, type AudienceMode } from "../components/ShareWithFriendsPicker";
 import type { FriendEntry } from "../hooks/useFriends";
 
@@ -246,6 +247,7 @@ export function DetailScreen({
                   <p className="item-detail__rating">★ {item.externalRating.toFixed(1)}</p>
                 )
               )}
+              <WhereToWatch externalSource={item.externalSource} externalId={item.externalId} />
             </div>
           </div>
 
