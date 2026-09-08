@@ -5,6 +5,7 @@ import { ScreenHeader } from "../components/ScreenHeader";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { WhereToWatch } from "../components/WhereToWatch";
 import type { FriendEntry } from "../hooks/useFriends";
+import { useSwipeBack } from "../hooks/useSwipeBack";
 
 interface RecommendationDetailScreenProps {
   recommendation: Recommendation;
@@ -35,6 +36,10 @@ interface RecommendationDetailScreenProps {
   friends?: FriendEntry[];
   hiddenFriendshipIds?: Set<string>;
   onEditSharing?: () => void;
+  // Optional — only App.tsx passes this, to know when it's worth mounting
+  // a lightweight backdrop of the previous screen behind an in-progress
+  // swipe-back. See useSwipeBack's own comment for the full rationale.
+  onSwipeActiveChange?: (active: boolean) => void;
 }
 
 // Reuses the same visual language as the Watchlist's DetailScreen (same
@@ -55,14 +60,23 @@ export function RecommendationDetailScreen({
   friends,
   hiddenFriendshipIds,
   onEditSharing,
+  onSwipeActiveChange,
 }: RecommendationDetailScreenProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const showSharing = !readOnly && friends && friends.length > 0 && onEditSharing;
   const currentHidden = hiddenFriendshipIds ?? new Set<string>();
 
+  // Edge-swipe-to-go-back — covers both the user's own recommendation
+  // detail and a friend's (readOnly) recommendation detail, since both
+  // render through this same component. See useSwipeBack's own comment
+  // for why it can't collide with normal scrolling here (including the
+  // modal-touch guard, which is what keeps this from firing under the
+  // delete confirmation dialog).
+  const swipeBack = useSwipeBack(onBack, onSwipeActiveChange);
+
   return (
-    <div className="app-screen">
+    <div className="app-screen" {...swipeBack}>
       <ScreenHeader
         title={recommendation.title}
         onBack={onBack}

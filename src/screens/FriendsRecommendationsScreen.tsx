@@ -96,6 +96,7 @@ export function FriendsRecommendationsScreen({
                 onSelect={onSelectRecommendation}
                 onSeeAll={() => onSeeAllFriend(group.friendUserId)}
                 badges={badges}
+                eager
                 emptyState={
                   <div className="poster-rail__empty-content">
                     <p className="text-muted">No recommendations yet.</p>

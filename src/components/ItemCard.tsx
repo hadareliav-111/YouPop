@@ -11,9 +11,17 @@ const STATUS_LABEL: Record<WatchlistItem["status"], string> = {
 interface ItemCardProps {
   item: WatchlistItem;
   onClick: () => void;
+  // Set true only by screens that can be a swipe-back destination/backdrop
+  // (see App.tsx's renderSwipeBackdrop). Their posters get destroyed and
+  // recreated fresh on every navigation handoff, and a brand-new
+  // <img loading="lazy" decoding="async"> isn't guaranteed to paint its
+  // (already browser-cached) bitmap in the same frame it's inserted — that
+  // gap was the post-swipe image flicker. Default (false/omitted) leaves
+  // every other usage exactly as before.
+  eager?: boolean;
 }
 
-export function ItemCard({ item, onClick }: ItemCardProps) {
+export function ItemCard({ item, onClick, eager }: ItemCardProps) {
   const isUpcoming =
     item.status === "want_to_watch" &&
     getReleaseAvailability(item.releaseDate) === "upcoming";
@@ -26,8 +34,8 @@ export function ItemCard({ item, onClick }: ItemCardProps) {
             className="item-card__poster"
             src={item.posterUrl}
             alt=""
-            loading="lazy"
-            decoding="async"
+            loading={eager ? undefined : "lazy"}
+            decoding={eager ? undefined : "async"}
           />
         ) : (
           <div className="item-card__poster item-card__poster--placeholder">

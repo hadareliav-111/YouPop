@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { Recommendation } from "../types";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { EmptyState } from "../components/EmptyState";
+import { useSwipeBack } from "../hooks/useSwipeBack";
 
 interface FriendVisibilityScreenProps {
   username: string;
@@ -11,6 +12,10 @@ interface FriendVisibilityScreenProps {
   onSelectAll: () => void;
   onClearAll: () => void;
   onBack: () => void;
+  // Optional — only App.tsx passes this, to know when it's worth mounting
+  // a lightweight backdrop of the previous screen behind an in-progress
+  // swipe-back. See useSwipeBack's own comment for the full rationale.
+  onSwipeActiveChange?: (active: boolean) => void;
 }
 
 // Manage Friends' "open a friend to see/change what they can see" screen —
@@ -26,6 +31,7 @@ export function FriendVisibilityScreen({
   onSelectAll,
   onClearAll,
   onBack,
+  onSwipeActiveChange,
 }: FriendVisibilityScreenProps) {
   const sorted = useMemo(
     () => [...recommendations].sort((a, b) => a.sortOrder - b.sortOrder),
@@ -33,8 +39,12 @@ export function FriendVisibilityScreen({
   );
   const visibleCount = sorted.filter((r) => isVisible(r.id)).length;
 
+  // Edge-swipe-to-go-back — see useSwipeBack's own comment for why it
+  // can't collide with normal scrolling here.
+  const swipeBack = useSwipeBack(onBack, onSwipeActiveChange);
+
   return (
-    <div className="app-screen">
+    <div className="app-screen" {...swipeBack}>
       <ScreenHeader title={`Shared with ${username}`} onBack={onBack} />
 
       <div className="app-screen__scroll">

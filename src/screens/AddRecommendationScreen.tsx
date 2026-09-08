@@ -12,6 +12,7 @@ import { ScreenHeader } from "../components/ScreenHeader";
 import { SearchStep } from "../components/AddFlow/SearchStep";
 import { ShareWithFriendsPicker, type AudienceMode } from "../components/ShareWithFriendsPicker";
 import type { FriendEntry } from "../hooks/useFriends";
+import { useSwipeBack } from "../hooks/useSwipeBack";
 
 interface AddRecommendationScreenProps {
   onClose: () => void;
@@ -20,6 +21,10 @@ interface AddRecommendationScreenProps {
   onAdd: (rec: Recommendation, hiddenFriendshipIds: string[]) => void;
   alreadyRecommended: (source: MediaSource, externalId: string) => boolean;
   friends: FriendEntry[];
+  // Optional — only App.tsx passes this, to know when it's worth mounting
+  // a lightweight backdrop of the previous screen behind an in-progress
+  // swipe-back. See useSwipeBack's own comment for the full rationale.
+  onSwipeActiveChange?: (active: boolean) => void;
 }
 
 type Step =
@@ -38,6 +43,7 @@ export function AddRecommendationScreen({
   onAdd,
   alreadyRecommended,
   friends,
+  onSwipeActiveChange,
 }: AddRecommendationScreenProps) {
   const [step, setStep] = useState<Step>({ kind: "search" });
   const [note, setNote] = useState("");
@@ -133,8 +139,13 @@ export function AddRecommendationScreen({
     setStep({ kind: "search" });
   };
 
+  // Edge-swipe-to-go-back — same handleBack the header's own Back button
+  // uses, so a swipe steps back to search first from a later step, exactly
+  // like tapping Back does, rather than skipping straight out of the flow.
+  const swipeBack = useSwipeBack(handleBack, onSwipeActiveChange);
+
   return (
-    <div className="app-screen">
+    <div className="app-screen" {...swipeBack}>
       <ScreenHeader title={title} onBack={handleBack} />
 
       {step.kind === "search" && (

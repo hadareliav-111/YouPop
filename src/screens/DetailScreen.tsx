@@ -13,6 +13,7 @@ import { Modal } from "../components/Modal";
 import { WhereToWatch } from "../components/WhereToWatch";
 import { ShareWithFriendsPicker, type AudienceMode } from "../components/ShareWithFriendsPicker";
 import type { FriendEntry } from "../hooks/useFriends";
+import { useSwipeBack } from "../hooks/useSwipeBack";
 
 const STATUS_LABEL: Record<WatchlistItem["status"], string> = {
   want_to_watch: "Want to watch",
@@ -38,6 +39,10 @@ interface DetailScreenProps {
   // caller needs to store the explicit mode, not infer it.
   onAddToRecommendations: (audience: AudienceMode, hiddenFriendshipIds: string[]) => void;
   friends: FriendEntry[];
+  // Optional — only App.tsx passes this, to know when it's worth mounting
+  // a lightweight backdrop of the previous screen behind an in-progress
+  // swipe-back. See useSwipeBack's own comment for the full rationale.
+  onSwipeActiveChange?: (active: boolean) => void;
 }
 
 // Full page rather than a bottom-sheet modal, per the same reasoning as
@@ -58,10 +63,17 @@ export function DetailScreen({
   isRecommended,
   onAddToRecommendations,
   friends,
+  onSwipeActiveChange,
 }: DetailScreenProps) {
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Edge-swipe-to-go-back — see useSwipeBack's own comment for why it
+  // can't collide with normal scrolling here (including the modal-touch
+  // guard, which is what keeps this from firing under the delete
+  // confirmation or the "Recommend to" modal below).
+  const swipeBack = useSwipeBack(onBack, onSwipeActiveChange);
 
   // "+ Add to Recommendations" audience choice — same {all|selected}
   // picker and contract as AddRecommendationScreen, just reached from a
@@ -192,7 +204,7 @@ export function DetailScreen({
   };
 
   return (
-    <div className="app-screen">
+    <div className="app-screen" {...swipeBack}>
       <ScreenHeader
         title={item.title}
         onBack={onBack}

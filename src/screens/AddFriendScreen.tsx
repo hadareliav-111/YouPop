@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { ScreenHeader } from "../components/ScreenHeader";
 import type { SearchResult } from "../hooks/useFriends";
+import { useSwipeBack } from "../hooks/useSwipeBack";
 
 interface AddFriendScreenProps {
   onBack: () => void;
@@ -8,6 +9,10 @@ interface AddFriendScreenProps {
   sendRequest: (targetId: string, targetUsername: string) => void;
   acceptRequest: (friendshipId: string) => void;
   cancelRequest: (friendshipId: string) => void;
+  // Optional — only App.tsx passes this, to know when it's worth mounting
+  // a lightweight backdrop of the previous screen behind an in-progress
+  // swipe-back. See useSwipeBack's own comment for the full rationale.
+  onSwipeActiveChange?: (active: boolean) => void;
 }
 
 // A dedicated screen for finding and adding a friend by exact username —
@@ -21,6 +26,7 @@ export function AddFriendScreen({
   sendRequest,
   acceptRequest,
   cancelRequest,
+  onSwipeActiveChange,
 }: AddFriendScreenProps) {
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
@@ -73,8 +79,12 @@ export function AddFriendScreen({
     setQuery("");
   };
 
+  // Edge-swipe-to-go-back — see useSwipeBack's own comment for why it
+  // can't collide with normal scrolling here.
+  const swipeBack = useSwipeBack(onBack, onSwipeActiveChange);
+
   return (
-    <div className="app-screen">
+    <div className="app-screen" {...swipeBack}>
       <ScreenHeader title="Add Friend" onBack={onBack} />
 
       <div className="app-screen__scroll">

@@ -185,10 +185,52 @@ a {
   text-align: center;
 }
 
+/* Thin positioning wrapper around the current screen — exists only so an
+   interactive swipe-back gesture (see useSwipeBack.ts) has somewhere to
+   mount a backdrop of the previous screen behind it. Occupies exactly the
+   space .app-screen used to occupy directly inside .app-shell; every
+   screen's own layout inside it is completely unaffected. */
+.app-screen-stack {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Every screen root (.home-screen, .app-screen, etc.) sizes itself via
+   flex: 1 1 auto; min-height: 0 — which only takes effect when its own
+   parent is a flex container, exactly like .app-shell already is for the
+   real, foreground screen. Being position:absolute takes this backdrop
+   out of .app-screen-stack's own flex flow, so without replicating that
+   same display:flex; flex-direction:column here, the mounted screen's
+   flex-based sizing has nothing to resolve against and collapses to its
+   content height instead of filling the frame — this is what makes it
+   the correct layout context, not a scaled-down copy of one. */
+.app-screen-stack__backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 /* Shared shell for pages other than Home (category & search): Home never
    scrolls, but a full category grid or search results legitimately need
    their own internal vertical scroll — contained within the phone frame. */
 .app-screen {
+  position: relative;
+  z-index: 1;
+  /* Was always implicitly opaque via .app-shell's own background showing
+     through any gap in this screen's own content — invisible as long as
+     nothing else was ever behind it. Now that the swipe-back backdrop
+     (see .app-screen-stack__backdrop) can be mounted behind it, that gap
+     would otherwise let the backdrop bleed through instead, reading as
+     transparency. Making the same color explicit here keeps every
+     screen's normal, non-gesture appearance pixel-identical while making
+     it genuinely solid once something real is behind it. */
+  background: var(--color-bg);
   flex: 1 1 auto;
   min-height: 0;
   display: flex;

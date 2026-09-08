@@ -4,6 +4,7 @@ import { DEFAULT_FILTERS, type Filters } from "../types/filters";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { WatchlistGrid } from "../components/WatchlistGrid";
 import { ReorderableGrid } from "../components/ReorderableGrid";
+import { useSwipeBack } from "../hooks/useSwipeBack";
 
 const CATEGORY_TITLE: Record<MediaType, string> = {
   movie: "Movies",
@@ -32,6 +33,10 @@ interface CategoryScreenProps {
   onSelectItem: (item: WatchlistItem) => void;
   onAdd: () => void;
   onReorder: (mediaType: MediaType, orderedIds: string[]) => void;
+  // Optional — only App.tsx passes this, to know when it's worth mounting
+  // a lightweight backdrop of the previous screen behind an in-progress
+  // swipe-back. See useSwipeBack's own comment for the full rationale.
+  onSwipeActiveChange?: (active: boolean) => void;
 }
 
 export function CategoryScreen({
@@ -41,12 +46,18 @@ export function CategoryScreen({
   onSelectItem,
   onAdd,
   onReorder,
+  onSwipeActiveChange,
 }: CategoryScreenProps) {
   const [filters, setFilters] = useState<Filters>({
     ...DEFAULT_FILTERS,
     mediaType,
   });
   const [editOrderMode, setEditOrderMode] = useState(false);
+
+  // Edge-swipe-to-go-back — only this screen and FriendRecommendationsScreen
+  // get it (see useSwipeBack's own comment for why it can't collide with
+  // ReorderableGrid's drag-to-reorder below or normal scrolling).
+  const swipeBack = useSwipeBack(onBack, onSwipeActiveChange);
 
   const categoryItems = useMemo(
     () => items.filter((item) => item.mediaType === mediaType),
@@ -103,7 +114,7 @@ export function CategoryScreen({
   );
 
   return (
-    <div className="app-screen">
+    <div className="app-screen" {...swipeBack}>
       <ScreenHeader
         title={CATEGORY_TITLE[mediaType]}
         onBack={onBack}
@@ -159,6 +170,7 @@ export function CategoryScreen({
             onAdd={onAdd}
             onClearFilters={() => setFilters({ ...DEFAULT_FILTERS, mediaType })}
             filtersActive={categoryFilterActive}
+            eager
           />
         )}
       </div>

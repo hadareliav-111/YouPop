@@ -124,6 +124,7 @@ export function HomeScreen({
           onSelect={onSelectItem}
           badges={currentlyWatchingBadges}
           grow={1.25}
+          eager
           emptyState={
             <div className="poster-rail__empty-content">
               <p>Nothing here yet.</p>
@@ -141,6 +142,7 @@ export function HomeScreen({
           onSelect={onSelectItem}
           onSeeAll={() => onOpenCategory("tv")}
           badges={tvBadges}
+          eager
           emptyState={
             <div className="poster-rail__empty-content">
               <p className="text-muted">No TV shows added yet.</p>
@@ -154,6 +156,7 @@ export function HomeScreen({
           onSelect={onSelectItem}
           onSeeAll={() => onOpenCategory("movie")}
           badges={movieBadges}
+          eager
           emptyState={
             <div className="poster-rail__empty-content">
               <p className="text-muted">No movies added yet.</p>

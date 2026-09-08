@@ -3,6 +3,7 @@ import { ScreenHeader } from "../components/ScreenHeader";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { EmptyState } from "../components/EmptyState";
 import type { FriendEntry } from "../hooks/useFriends";
+import { useSwipeBack } from "../hooks/useSwipeBack";
 
 interface FriendsScreenProps {
   onBack: () => void;
@@ -20,6 +21,10 @@ interface FriendsScreenProps {
   totalRecommendations: number;
   visibleCountFor: (friendshipId: string) => number;
   onOpenFriendSharing: (friend: FriendEntry) => void;
+  // Optional — only App.tsx passes this, to know when it's worth mounting
+  // a lightweight backdrop of the previous screen behind an in-progress
+  // swipe-back. See useSwipeBack's own comment for the full rationale.
+  onSwipeActiveChange?: (active: boolean) => void;
 }
 
 export function FriendsScreen({
@@ -35,11 +40,18 @@ export function FriendsScreen({
   totalRecommendations,
   visibleCountFor,
   onOpenFriendSharing,
+  onSwipeActiveChange,
 }: FriendsScreenProps) {
   const [removingFriend, setRemovingFriend] = useState<FriendEntry | null>(null);
 
+  // Edge-swipe-to-go-back — see useSwipeBack's own comment for why it
+  // can't collide with normal scrolling here (including the modal-touch
+  // guard, which is what keeps this from firing under the remove-friend
+  // confirmation dialog).
+  const swipeBack = useSwipeBack(onBack, onSwipeActiveChange);
+
   return (
-    <div className="app-screen">
+    <div className="app-screen" {...swipeBack}>
       <ScreenHeader
         title="Friends"
         onBack={onBack}

@@ -10,6 +10,9 @@ interface PosterRailProps<T extends PosterEntry> {
   badges?: Record<string, string>;
   emptyState: ReactNode;
   grow?: number;
+  // See RailTile's own comment. Passed through unchanged to every tile in
+  // this rail.
+  eager?: boolean;
 }
 
 export function PosterRail<T extends PosterEntry>({
@@ -20,6 +23,7 @@ export function PosterRail<T extends PosterEntry>({
   badges,
   emptyState,
   grow = 1,
+  eager,
 }: PosterRailProps<T>) {
   return (
     <section className="poster-rail" style={{ flexGrow: grow }}>
@@ -39,6 +43,7 @@ export function PosterRail<T extends PosterEntry>({
               item={item}
               badge={badges?.[item.id]}
               onClick={() => onSelect(item)}
+              eager={eager}
             />
           ))}
         </div>

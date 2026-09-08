@@ -78,6 +78,7 @@ export function RecommendationsScreen({
                 key={rec.id}
                 recommendation={rec}
                 onClick={() => onSelect(rec)}
+                eager
               />
             ))}
           </div>

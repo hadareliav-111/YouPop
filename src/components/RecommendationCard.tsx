@@ -18,6 +18,14 @@ interface RecommendationCardProps {
   watchlistStatus?: WatchStatus | null;
   onAddToWatchlist?: () => void;
   onMarkWatched?: () => void;
+  // Set true only by screens that can be a swipe-back destination/backdrop
+  // (see App.tsx's renderSwipeBackdrop). Their posters get destroyed and
+  // recreated fresh on every navigation handoff, and a brand-new
+  // <img loading="lazy" decoding="async"> isn't guaranteed to paint its
+  // (already browser-cached) bitmap in the same frame it's inserted — that
+  // gap was the post-swipe image flicker. Default (false/omitted) leaves
+  // every other usage exactly as before.
+  eager?: boolean;
 }
 
 // Deliberately simpler than ItemCard — no status badge, no rating footer,
@@ -29,6 +37,7 @@ export function RecommendationCard({
   watchlistStatus,
   onAddToWatchlist,
   onMarkWatched,
+  eager,
 }: RecommendationCardProps) {
   return (
     <div className="item-card">
@@ -39,8 +48,8 @@ export function RecommendationCard({
               className="item-card__poster"
               src={recommendation.posterUrl}
               alt=""
-              loading="lazy"
-              decoding="async"
+              loading={eager ? undefined : "lazy"}
+              decoding={eager ? undefined : "async"}
             />
           ) : (
             <div className="item-card__poster item-card__poster--placeholder">🎬</div>

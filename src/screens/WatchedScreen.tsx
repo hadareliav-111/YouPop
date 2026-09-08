@@ -4,17 +4,26 @@ import { DEFAULT_FILTERS, type Filters } from "../types/filters";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { FilterBar } from "../components/FilterBar";
 import { WatchlistGrid } from "../components/WatchlistGrid";
+import { useSwipeBack } from "../hooks/useSwipeBack";
 
 interface WatchedScreenProps {
   items: WatchlistItem[];
   onBack: () => void;
   onSelectItem: (item: WatchlistItem) => void;
+  // Optional — only App.tsx passes this, to know when it's worth mounting
+  // a lightweight backdrop of the previous screen behind an in-progress
+  // swipe-back. See useSwipeBack's own comment for the full rationale.
+  onSwipeActiveChange?: (active: boolean) => void;
 }
 
 const BASE_FILTERS: Filters = { ...DEFAULT_FILTERS, status: "watched", sort: "recent" };
 
-export function WatchedScreen({ items, onBack, onSelectItem }: WatchedScreenProps) {
+export function WatchedScreen({ items, onBack, onSelectItem, onSwipeActiveChange }: WatchedScreenProps) {
   const [filters, setFilters] = useState<Filters>(BASE_FILTERS);
+
+  // Edge-swipe-to-go-back — see useSwipeBack's own comment for why it
+  // can't collide with normal scrolling here.
+  const swipeBack = useSwipeBack(onBack, onSwipeActiveChange);
 
   const watchedItems = useMemo(
     () => items.filter((item) => item.status === "watched"),
@@ -73,7 +82,7 @@ export function WatchedScreen({ items, onBack, onSelectItem }: WatchedScreenProp
     Boolean(filters.recommender);
 
   return (
-    <div className="app-screen">
+    <div className="app-screen" {...swipeBack}>
       <ScreenHeader title="Watched" onBack={onBack} />
       <FilterBar
         filters={filters}
@@ -95,6 +104,7 @@ export function WatchedScreen({ items, onBack, onSelectItem }: WatchedScreenProp
           emptyTitle="Nothing watched yet"
           emptyMessage="Once you mark something as watched, it'll show up here."
           emptyActionLabel={null}
+          eager
         />
       </div>
     </div>

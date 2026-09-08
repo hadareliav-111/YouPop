@@ -13,6 +13,9 @@ interface WatchlistGridProps {
   emptyTitle?: string;
   emptyMessage?: string;
   emptyActionLabel?: string | null;
+  // See ItemCard's own comment. Passed through unchanged to every card in
+  // this grid.
+  eager?: boolean;
 }
 
 export function WatchlistGrid({
@@ -26,6 +29,7 @@ export function WatchlistGrid({
   emptyTitle = "Your watchlist is empty",
   emptyMessage = "Add a movie or show you want to watch.",
   emptyActionLabel = "+ Add something",
+  eager,
 }: WatchlistGridProps) {
   if (!hasAnyItems) {
     return (
@@ -58,7 +62,7 @@ export function WatchlistGrid({
   return (
     <div className="watchlist-grid">
       {items.map((item) => (
-        <ItemCard key={item.id} item={item} onClick={() => onSelect(item)} />
+        <ItemCard key={item.id} item={item} onClick={() => onSelect(item)} eager={eager} />
       ))}
     </div>
   );

@@ -144,8 +144,16 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
   // matter how they were reached.
   const [screenStack, setScreenStack] = useState<Screen[]>([{ kind: "home" }]);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Whether one of the five swipe-back-enabled screens is currently being
+  // interactively dragged — the only thing this drives is whether the
+  // lightweight backdrop below (renderSwipeBackdrop) gets mounted behind
+  // it. Doesn't touch screenStack/pushScreen/popScreen at all; those stay
+  // exactly as they were.
+  const [swipeActive, setSwipeActive] = useState(false);
 
   const screen = screenStack[screenStack.length - 1];
+  const previousScreen =
+    swipeActive && screenStack.length > 1 ? screenStack[screenStack.length - 2] : null;
 
   const pushScreen = (next: Screen) =>
     setScreenStack((stack) => [...stack, next]);
@@ -260,6 +268,122 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
     });
   };
 
+  // Lightweight, additive-only backdrop for the interactive swipe-back
+  // gesture (see useSwipeBack.ts). Mounted ONLY while previousScreen is
+  // non-null, i.e. only while a swipe is actively being tracked on the
+  // current top screen — and only for the set of screen kinds that can
+  // ever actually be "the screen underneath" one of the swipe-enabled
+  // screens. Tracing every pushScreen call below: `category` and `add`
+  // only ever come from `home`; `add` also from `category`/`watched`;
+  // `add-recommendation` only from `recommendations`; `add-friend` and
+  // `friend-visibility` only from `friends`; `friend-recommendations` only
+  // from `friends-recommendations`; `detail` from `home`, `category`, or
+  // `watched`; `recommendation-detail` only from `recommendations`;
+  // `friend-recommendation-detail` from `friends-recommendations` or
+  // `friend-recommendations`. That's the complete set below — every other
+  // screen kind can never legitimately appear as a backdrop given how
+  // navigation actually flows in this app, so it renders nothing.
+  //
+  // Deliberately NOT a generalization of the switch further down: this is
+  // a separate, small, local function reusing the same data already in
+  // scope, not a refactor of how the real top screen renders — that
+  // switch, and screenStack/pushScreen/popScreen, are untouched. Handlers
+  // are all no-ops on purpose: this is a purely visual stand-in, never
+  // meant to be interactive (the actively-dragged foreground screen keeps
+  // capturing the touch for the gesture's whole duration regardless of
+  // how much of the backdrop is visually revealed).
+  const renderSwipeBackdrop = (s: Screen) => {
+    switch (s.kind) {
+      case "home":
+        return (
+          <HomeScreen
+            items={items}
+            onSelectItem={() => {}}
+            onOpenCategory={() => {}}
+            onAdd={() => {}}
+            onOpenWatched={() => {}}
+            onOpenMenu={() => {}}
+            onSwitchTab={() => {}}
+            friendRequestCount={pendingIncomingCount}
+          />
+        );
+      case "category":
+        return (
+          <CategoryScreen
+            mediaType={s.mediaType}
+            items={items}
+            onBack={() => {}}
+            onSelectItem={() => {}}
+            onAdd={() => {}}
+            onReorder={() => {}}
+          />
+        );
+      case "watched":
+        return <WatchedScreen items={items} onBack={() => {}} onSelectItem={() => {}} />;
+      case "recommendations":
+        return (
+          <RecommendationsScreen
+            items={recommendations}
+            onSelect={() => {}}
+            onAdd={() => {}}
+            onReorder={() => {}}
+            onSwitchTab={() => {}}
+            onOpenMenu={() => {}}
+            friendRequestCount={pendingIncomingCount}
+          />
+        );
+      case "friends":
+        return (
+          <FriendsScreen
+            onBack={() => {}}
+            onOpenAddFriend={() => {}}
+            incomingRequests={incomingRequests}
+            outgoingRequests={outgoingRequests}
+            friends={friends}
+            acceptRequest={() => {}}
+            declineRequest={() => {}}
+            cancelRequest={() => {}}
+            removeFriend={() => {}}
+            totalRecommendations={recommendations.length}
+            visibleCountFor={visibleCountFor}
+            onOpenFriendSharing={() => {}}
+          />
+        );
+      case "friends-recommendations":
+        return (
+          <FriendsRecommendationsScreen
+            onManageFriends={() => {}}
+            groups={groupedByFriend}
+            watchlistItems={items}
+            isNew={isFriendRecommendationNew}
+            onSelectRecommendation={() => {}}
+            onSeeAllFriend={() => {}}
+            onSwitchTab={() => {}}
+            onOpenMenu={() => {}}
+            friendRequestCount={pendingIncomingCount}
+          />
+        );
+      case "friend-recommendations": {
+        const group = groupedByFriend.find((g) => g.friendUserId === s.friendId);
+        if (!group) return null;
+        return (
+          <FriendRecommendationsScreen
+            username={group.username}
+            recommendations={group.recommendations}
+            watchlistItems={items}
+            isNew={isFriendRecommendationNew}
+            onBack={() => {}}
+            onSelect={() => {}}
+            onAddToWatchlist={() => {}}
+            onMarkWatched={() => {}}
+          />
+        );
+      }
+      default:
+        return null;
+    }
+  };
+
   if (itemsLoading) {
     return null;
   }
@@ -276,7 +400,13 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
         </div>
       )}
 
-      <ErrorBoundary key={JSON.stringify(screen)} label="This screen">
+      <div className="app-screen-stack">
+        {previousScreen && (
+          <div className="app-screen-stack__backdrop" aria-hidden="true">
+            {renderSwipeBackdrop(previousScreen)}
+          </div>
+        )}
+        <ErrorBoundary key={JSON.stringify(screen)} label="This screen">
         {screen.kind === "home" && (
           <HomeScreen
             items={items}
@@ -298,6 +428,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
             onSelectItem={(item) => pushScreen({ kind: "detail", itemId: item.id })}
             onAdd={() => pushScreen({ kind: "add" })}
             onReorder={reorderCategory}
+            onSwipeActiveChange={setSwipeActive}
           />
         )}
 
@@ -306,6 +437,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
             items={items}
             onBack={popScreen}
             onSelectItem={(item) => pushScreen({ kind: "detail", itemId: item.id })}
+            onSwipeActiveChange={setSwipeActive}
           />
         )}
 
@@ -315,6 +447,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
             onAdd={addItem}
             existingTags={tags}
             isAlreadyAdded={alreadyAdded}
+            onSwipeActiveChange={setSwipeActive}
           />
         )}
 
@@ -365,6 +498,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
                   }
                 });
               }}
+              onSwipeActiveChange={setSwipeActive}
             />
           </ErrorBoundary>
         )}
@@ -397,6 +531,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
             onOpenFriendSharing={(friend) =>
               pushScreen({ kind: "friend-visibility", friendshipId: friend.friendshipId })
             }
+            onSwipeActiveChange={setSwipeActive}
           />
         )}
 
@@ -407,6 +542,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
             sendRequest={sendFriendRequest}
             acceptRequest={acceptFriendRequest}
             cancelRequest={cancelFriendRequest}
+            onSwipeActiveChange={setSwipeActive}
           />
         )}
 
@@ -423,6 +559,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
             onSelectAll={() => setAllVisibilityForFriendship(selectedFriendForVisibility.friendshipId, true)}
             onClearAll={() => setAllVisibilityForFriendship(selectedFriendForVisibility.friendshipId, false)}
             onBack={popScreen}
+            onSwipeActiveChange={setSwipeActive}
           />
         )}
 
@@ -456,6 +593,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
             onMarkWatched={(rec) =>
               addFriendRecommendationToWatchlist(rec, selectedFriendGroup.username, "watched")
             }
+            onSwipeActiveChange={setSwipeActive}
           />
         )}
 
@@ -479,6 +617,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
                   "watched",
                 )
               }
+              onSwipeActiveChange={setSwipeActive}
             />
           </ErrorBoundary>
         )}
@@ -495,6 +634,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
             }}
             alreadyRecommended={alreadyRecommended}
             friends={friends}
+            onSwipeActiveChange={setSwipeActive}
           />
         )}
 
@@ -515,6 +655,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
               onEditSharing={() =>
                 pushScreen({ kind: "recommendation-sharing", id: selectedRecommendation.id })
               }
+              onSwipeActiveChange={setSwipeActive}
             />
           </ErrorBoundary>
         )}
@@ -544,6 +685,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
           />
         )}
       </ErrorBoundary>
+      </div>
 
       {menuOpen && (
         <MenuModal

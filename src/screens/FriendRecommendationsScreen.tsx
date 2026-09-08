@@ -5,6 +5,7 @@ import { isNotWatched, getWatchlistStatus } from "../lib/watchStatus";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { RecommendationCard } from "../components/RecommendationCard";
 import { EmptyState } from "../components/EmptyState";
+import { useSwipeBack } from "../hooks/useSwipeBack";
 
 type FilterMode = "not_watched" | "all";
 
@@ -17,6 +18,10 @@ interface FriendRecommendationsScreenProps {
   onSelect: (recommendation: FriendRecommendation) => void;
   onAddToWatchlist: (recommendation: FriendRecommendation) => void;
   onMarkWatched: (recommendation: FriendRecommendation) => void;
+  // Optional — only App.tsx passes this, to know when it's worth mounting
+  // a lightweight backdrop of the previous screen behind an in-progress
+  // swipe-back. See useSwipeBack's own comment for the full rationale.
+  onSwipeActiveChange?: (active: boolean) => void;
 }
 
 // The "See all" destination for one friend — a read-only grid, same
@@ -30,8 +35,13 @@ export function FriendRecommendationsScreen({
   onSelect,
   onAddToWatchlist,
   onMarkWatched,
+  onSwipeActiveChange,
 }: FriendRecommendationsScreenProps) {
   const [filter, setFilter] = useState<FilterMode>("not_watched");
+
+  // Edge-swipe-to-go-back — see useSwipeBack's own comment for why it
+  // can't collide with normal scrolling here.
+  const swipeBack = useSwipeBack(onBack, onSwipeActiveChange);
 
   const filtered = useMemo(
     () =>
@@ -42,7 +52,7 @@ export function FriendRecommendationsScreen({
   );
 
   return (
-    <div className="app-screen">
+    <div className="app-screen" {...swipeBack}>
       <ScreenHeader title={username} onBack={onBack} />
 
       <div className="category-screen__filter-tabs">
@@ -76,6 +86,7 @@ export function FriendRecommendationsScreen({
                 watchlistStatus={getWatchlistStatus(rec, watchlistItems)}
                 onAddToWatchlist={() => onAddToWatchlist(rec)}
                 onMarkWatched={() => onMarkWatched(rec)}
+                eager
               />
             ))}
           </div>

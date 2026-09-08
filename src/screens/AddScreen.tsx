@@ -10,12 +10,17 @@ import type { NewItemDraft, WatchlistItem } from "../types";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { SearchStep } from "../components/AddFlow/SearchStep";
 import { DetailsFormStep } from "../components/AddFlow/DetailsFormStep";
+import { useSwipeBack } from "../hooks/useSwipeBack";
 
 interface AddScreenProps {
   onClose: () => void;
   onAdd: (item: WatchlistItem) => void;
   existingTags: string[];
   isAlreadyAdded: (source: MediaSource, externalId: string) => boolean;
+  // Optional — only App.tsx passes this, to know when it's worth mounting
+  // a lightweight backdrop of the previous screen behind an in-progress
+  // swipe-back. See useSwipeBack's own comment for the full rationale.
+  onSwipeActiveChange?: (active: boolean) => void;
 }
 
 type Step =
@@ -34,6 +39,7 @@ export function AddScreen({
   onAdd,
   existingTags,
   isAlreadyAdded,
+  onSwipeActiveChange,
 }: AddScreenProps) {
   const [step, setStep] = useState<Step>({ kind: "search" });
 
@@ -116,8 +122,13 @@ export function AddScreen({
     setStep({ kind: "search" });
   };
 
+  // Edge-swipe-to-go-back — same handleBack the header's own Back button
+  // uses, so a swipe steps back to search first from a later step, exactly
+  // like tapping Back does, rather than skipping straight out of the flow.
+  const swipeBack = useSwipeBack(handleBack, onSwipeActiveChange);
+
   return (
-    <div className="app-screen">
+    <div className="app-screen" {...swipeBack}>
       <ScreenHeader title={title} onBack={handleBack} />
 
       {step.kind === "search" && (

@@ -197,3 +197,19 @@ export async function getEpisodes(
   episodesCache.set(cacheKey, episodes);
   return episodes;
 }
+
+// Synchronous peek into the same session-lifetime episodesCache above — no
+// second cache, no network call. Even a cache *hit* through getEpisodes()
+// costs a microtask (it's declared async), which is enough for a
+// freshly-mounted component's first render/paint to happen before that
+// already-cached data is applied. This lets a fresh mount seed its initial
+// state with whatever's already cached (e.g. fetched moments earlier by a
+// previous instance of the same screen) instead of always starting from
+// nothing until its own effect's fetch resolves.
+export function getCachedEpisodes(
+  source: MediaSource,
+  externalId: string,
+): TvmazeEpisode[] | undefined {
+  if (source !== "tvmaze") return undefined;
+  return episodesCache.get(`${source}::${externalId}`);
+}
