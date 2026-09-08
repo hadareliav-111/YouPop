@@ -114,11 +114,12 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
 
   const {
     hiddenFor: hiddenFriendshipIdsFor,
+    isVisibleTo: isRecommendationVisibleTo,
     visibleCountFor,
     setAudience: setRecommendationAudience,
     setVisibility: setRecommendationVisibility,
     setAllVisibilityForFriendship,
-  } = useRecommendationSharing(userId, recommendations, friends);
+  } = useRecommendationSharing(userId, recommendations, friends, setRecommendationAudienceLocal);
 
   const [displayName, setDisplayName] = useState<string | null>(null);
 
@@ -414,7 +415,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
             username={selectedFriendForVisibility.username}
             recommendations={recommendations}
             isVisible={(recId) =>
-              !hiddenFriendshipIdsFor(recId).has(selectedFriendForVisibility.friendshipId)
+              isRecommendationVisibleTo(recId, selectedFriendForVisibility.friendshipId)
             }
             onToggle={(recId, visible) =>
               setRecommendationVisibility(recId, selectedFriendForVisibility.friendshipId, visible)

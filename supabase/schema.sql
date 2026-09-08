@@ -251,6 +251,60 @@ as $$
   );
 $$;
 
+-- SECURITY DEFINER helper for the *other* direction of the same recursion
+-- problem owns_recommendation() solves above. recommendations' own friend-
+-- visibility policy (further down this file) needs to know whether a
+-- given (recommendation, friendship) pair is hidden — but a friend (not
+-- the recommendation's owner) evaluating that policy has no SELECT access
+-- to recommendation_hidden_friends at all (see the owner-only policies
+-- above), so a plain subquery there would silently see zero rows
+-- regardless of what's actually stored, making the hidden-row check
+-- vacuously "not hidden" for every non-owning friend. Running as the
+-- function owner — exempt from recommendation_hidden_friends's own RLS,
+-- the same exemption owns_recommendation() relies on — is what lets this
+-- see the real row no matter who's asking. It only ever touches
+-- recommendation_hidden_friends, never recommendations, so calling it
+-- from recommendations' policy can't recurse back into that policy the
+-- way a naive fix might.
+--
+-- This does not expose recommendation_hidden_friends's contents to
+-- friends: it answers a single yes/no question about one specific pair,
+-- never a row set — a friend still cannot list, enumerate, or read any
+-- row of that table directly through this. The friendship-membership
+-- check below is what keeps that true even for a direct RPC call (not
+-- just when invoked from the recommendations policy below, which only
+-- ever passes a friendship the caller is already confirmed to be part
+-- of): without it, this function would happily answer the yes/no
+-- question for *any* friendship_id a caller supplied, including ones
+-- they have nothing to do with, which would leak one bit of someone
+-- else's private sharing configuration to an unrelated authenticated
+-- user. Requiring auth.uid() to be a party to p_friendship_id closes
+-- that — the policy's own call site always satisfies it trivially
+-- (recommendations' policy already restricts f to friendships auth.uid()
+-- is part of before ever calling this), so this adds no behavior change
+-- for the legitimate caller, only a hard stop for everyone else.
+create or replace function public.is_recommendation_hidden_from_friendship(
+  p_recommendation_id uuid,
+  p_friendship_id uuid
+)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.recommendation_hidden_friends h
+    where h.recommendation_id = p_recommendation_id
+      and h.friendship_id = p_friendship_id
+  )
+  and exists (
+    select 1 from public.friendships f
+    where f.id = p_friendship_id
+      and (f.requester_id = auth.uid() or f.addressee_id = auth.uid())
+  );
+$$;
+
 -- Only the owner of the recommendation may see or manage its hidden-friend
 -- rows — a friend never reads this table directly, they just don't see the
 -- recommendation via the updated recommendations select policy below.
@@ -342,14 +396,28 @@ $$;
 
 -- Same atomicity fix as above, for the Manage Friends per-friend Select
 -- All / Clear All bulk action (one friendship, many recommendations)
--- instead of the per-recommendation case. Reviewed against the audience
--- column above and left unchanged: this only ever writes hidden rows,
--- never recommendations.audience, and a hidden row is inert for any
--- recommendation currently in "all" mode (see the select policy below) —
--- toggling one friend's visibility into a specific "all friends"
--- recommendation from here has no effect by design; switching that one
--- recommendation to "Selected friends" (via its own Sharing screen) is
--- what actually changes who can see it.
+-- instead of the per-recommendation case.
+--
+-- Unlike the rest of this table's writers, this one *does* also touch
+-- recommendations.audience: a hidden row is inert for any recommendation
+-- still in "all" mode (see the select policy below), so Clear All has to
+-- convert each such recommendation to "selected" in the same transaction
+-- as hiding it from this friendship — otherwise unchecking someone here
+-- would silently do nothing, exactly like set_recommendation_audience
+-- already does for the single-recommendation Sharing screen. Only the
+-- recommendation being hidden from *this* friendship gets a hidden row;
+-- every other current friend keeps seeing it purely by staying absent
+-- from the hidden set (the same zero-hidden-rows-for-every-current-
+-- friend invariant set_recommendation_audience's own comment describes),
+-- and future friends are excluded from that point on by
+-- accept_friend_request()'s own backfill, exactly like any other
+-- "selected" recommendation. Select All (p_recommendation_ids = the
+-- unhide case) never touches audience at all: unhiding a friendship has
+-- nothing to convert for an "all" recommendation (never hidden from
+-- anyone to begin with), and must never flip a "selected" recommendation
+-- back to "all" even once every current friend ends up unhidden — see
+-- set_recommendation_audience's invariant comment for why that
+-- distinction matters for friends accepted later.
 --
 -- Explicit authorization, not just RLS-by-implication: the delete below
 -- has no ownership condition of its own — its WHERE clause is only
@@ -367,9 +435,12 @@ $$;
 -- friendships, and every id in p_recommendation_ids must be a
 -- recommendation the caller owns (via owns_recommendation(), the same
 -- helper the RLS policies above already use) — both checked, and an
--- exception raised on failure, *before* anything is deleted or
--- inserted, so validation + delete + insert remain one all-or-nothing
--- transaction.
+-- exception raised on failure, *before* anything is updated, deleted, or
+-- inserted, so validation + the audience update + delete + insert remain
+-- one all-or-nothing transaction. The audience update itself still runs
+-- under "Users can update their own recommendations" (this function is
+-- SECURITY INVOKER, not definer), which is a second, independent
+-- ownership check on top of the explicit one below.
 create or replace function public.replace_recommendation_hidden_friends_for_friendship(
   p_friendship_id uuid,
   p_recommendation_ids uuid[]
@@ -394,6 +465,11 @@ begin
   ) then
     raise exception 'One or more recommendations are not owned by caller';
   end if;
+
+  update public.recommendations
+  set audience = 'selected'
+  where id = any(p_recommendation_ids)
+    and audience = 'all';
 
   delete from public.recommendation_hidden_friends
   where friendship_id = p_friendship_id;
@@ -498,12 +574,18 @@ create policy "Users can view profiles of people they have a friendship or reque
 -- whole check — every accepted friend sees it, full stop. For audience =
 -- 'selected', also requires that this specific friendship isn't excluded
 -- via recommendation_hidden_friends — see that table above for how a
--- "selected" recommendation's specific audience is stored. This
--- recommendation_hidden_friends reference is safe from the RLS
--- recursion that table's own policies would otherwise create with this
--- one — see owns_recommendation() above for the full explanation; that
--- helper is what breaks the cycle, not anything about the audience
--- column added here.
+-- "selected" recommendation's specific audience is stored.
+--
+-- The hidden-row check goes through is_recommendation_hidden_from_friendship()
+-- (see above) rather than a plain subquery on recommendation_hidden_friends
+-- directly: a friend (not the recommendation's owner) evaluating this
+-- policy has no SELECT access to that table at all (its policies are
+-- owner-only), so a plain subquery here would always see zero rows
+-- regardless of what's actually stored, making "selected" recommendations
+-- silently visible to every accepted friend instead of just the
+-- non-hidden ones. Routing through the SECURITY DEFINER helper is what
+-- lets this see the real row without granting friends any direct
+-- SELECT access to recommendation_hidden_friends.
 create policy "Users can view accepted friends' visible recommendations"
   on public.recommendations for select
   using (
@@ -516,11 +598,7 @@ create policy "Users can view accepted friends' visible recommendations"
         )
         and (
           recommendations.audience = 'all'
-          or not exists (
-            select 1 from public.recommendation_hidden_friends h
-            where h.recommendation_id = recommendations.id
-              and h.friendship_id = f.id
-          )
+          or not public.is_recommendation_hidden_from_friendship(recommendations.id, f.id)
         )
     )
   );
@@ -611,14 +689,15 @@ grant select, insert, delete on public.recommendation_hidden_friends to authenti
 -- PostgreSQL grants EXECUTE on every newly created function to PUBLIC by
 -- default (unlike tables/sequences/schemas, which grant nothing to
 -- PUBLIC) — a plain `grant ... to authenticated` below is additive and
--- does not remove that implicit grant on its own. Both of these are
+-- does not remove that implicit grant on its own. These are all
 -- SECURITY DEFINER, so an explicit revoke matters here specifically:
 -- their internal logic already happens to make an anonymous call
 -- harmless today (auth.uid() is null for `anon`, so
--- owns_recommendation() always returns false and accept_friend_request()
--- always hits its `raise exception` before touching a row), but
--- authorization should come from the privilege system itself, not from
--- incidentally-safe function bodies. set_recommendation_audience() and
+-- owns_recommendation() and is_recommendation_hidden_from_friendship()
+-- always return false and accept_friend_request() always hits its
+-- `raise exception` before touching a row), but authorization should
+-- come from the privilege system itself, not from incidentally-safe
+-- function bodies. set_recommendation_audience() and
 -- replace_recommendation_hidden_friends_for_friendship() don't need the
 -- same treatment — they're SECURITY INVOKER, so an anon call would run
 -- as `anon`, which was never granted any base privilege on
@@ -627,9 +706,11 @@ grant select, insert, delete on public.recommendation_hidden_friends to authenti
 -- error before RLS is even reached, independently of this function's own
 -- grants.
 revoke execute on function public.owns_recommendation(uuid) from public;
+revoke execute on function public.is_recommendation_hidden_from_friendship(uuid, uuid) from public;
 revoke execute on function public.accept_friend_request(uuid) from public;
 
 grant execute on function public.owns_recommendation(uuid) to authenticated;
+grant execute on function public.is_recommendation_hidden_from_friendship(uuid, uuid) to authenticated;
 grant execute on function public.set_recommendation_audience(uuid, text, uuid[]) to authenticated;
 grant execute on function public.replace_recommendation_hidden_friends_for_friendship(uuid, uuid[]) to authenticated;
 grant execute on function public.accept_friend_request(uuid) to authenticated;
