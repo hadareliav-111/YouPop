@@ -52,9 +52,12 @@ export function SearchStep({
     setPartialFailure(false);
 
     searchAll(trimmed, controller.signal)
-      .then(({ results, failedSources }) => {
+      .then(({ results, failedSources, hasStrongMatch }) => {
         setResults(results);
-        setPartialFailure(failedSources.length > 0);
+        // A failed/timed-out provider only matters if we don't already
+        // have a confident answer without it — see hasStrongMatch in
+        // providers/index.ts.
+        setPartialFailure(failedSources.length > 0 && !hasStrongMatch);
         setLoading(false);
         if (results.length === 0 && failedSources.length > 0) {
           setError("Couldn't search right now. Please try again.");

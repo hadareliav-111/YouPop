@@ -6,6 +6,7 @@
 import type { FullDetails, MediaProvider, SearchResultItem, TvSubtype } from "./types";
 import { ProviderRequestError } from "./types";
 import { getRatingsByImdbId, isOmdbConfigured } from "./omdb";
+import { searchWithLastWordFallback } from "./searchHelpers";
 
 const BASE_URL = "https://api.tvmaze.com";
 
@@ -83,16 +84,28 @@ function toSearchResult(entry: TvmazeSearchEntry): SearchResultItem {
   };
 }
 
-async function search(
+async function tvmazeSearchRequest(
   query: string,
   signal?: AbortSignal,
 ): Promise<SearchResultItem[]> {
-  if (!query.trim()) return [];
   const entries = await tvmazeFetch<TvmazeSearchEntry[]>(
     `/search/shows?q=${encodeURIComponent(query)}`,
     signal,
   );
   return entries.map(toSearchResult);
+}
+
+// TVmaze's own search already does real fuzzy/typo matching server-side
+// for complete words, but not for a trailing word the user hasn't
+// finished typing yet ("modern fam", "stranger thi") — see
+// searchWithLastWordFallback in searchHelpers.ts for the one narrow retry
+// this adds on top of the literal search, and why it stops there.
+async function search(
+  query: string,
+  signal?: AbortSignal,
+): Promise<SearchResultItem[]> {
+  if (!query.trim()) return [];
+  return searchWithLastWordFallback(query, (q) => tvmazeSearchRequest(q, signal));
 }
 
 async function getDetails(

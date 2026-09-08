@@ -47,13 +47,74 @@ const detailsCache = new Map<string, FullDetails>();
 // noise — the real answer is always near the top.
 const MAX_RESULTS = 24;
 
+// How confident the best surviving result needs to be for a provider
+// failure/timeout elsewhere to not matter — see hasStrongMatch below.
+// STARTS_WITH (and everything above it: WORD_MATCH's better siblings,
+// EXACT_AFTER_ARTICLE, EXACT) all count; WORD_MATCH and below don't, since
+// those are much less certain answers where a failed provider might
+// genuinely have had something better.
+const STRONG_MATCH_THRESHOLD = RELEVANCE_TIERS.STARTS_WITH;
+
+// Bounds how long searchAll() waits on any one provider. A provider whose
+// own request is still legitimately slow (e.g. OMDb working through its
+// sequential typo/fallback chain on a query that's actually TV-shaped,
+// not movie-shaped — see searchHelpers.ts) must never hold back a
+// different provider's already-ready, relevant result: once this expires,
+// searchAll() stops waiting on that one provider and returns with
+// whatever's already in hand, treating it the same way an outright
+// failure is already treated below. This changes nothing about *what* or
+// *how many* requests a provider makes, or its own caching/quota
+// accounting (see withSearchCache below and omdb.ts/omdb-proxy) — the
+// slow provider's own promise keeps running untouched in the background;
+// this only stops this particular call from waiting on it.
+const PROVIDER_TIMEOUT_MS = 3000;
+
+type ProviderOutcome<T> =
+  | { status: "fulfilled"; value: T }
+  | { status: "rejected"; reason: unknown }
+  | { status: "timed-out" };
+
+function withBoundedWait<T>(promise: Promise<T>, ms: number): Promise<ProviderOutcome<T>> {
+  return new Promise((resolve) => {
+    let done = false;
+    const timer = setTimeout(() => {
+      if (done) return;
+      done = true;
+      resolve({ status: "timed-out" });
+    }, ms);
+    promise.then(
+      (value) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve({ status: "fulfilled", value });
+      },
+      (reason: unknown) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve({ status: "rejected", reason });
+      },
+    );
+  });
+}
+
 export async function searchAll(
   query: string,
   signal?: AbortSignal,
-): Promise<{ results: SearchResultItem[]; failedSources: MediaSource[] }> {
+): Promise<{
+  results: SearchResultItem[];
+  failedSources: MediaSource[];
+  hasStrongMatch: boolean;
+}> {
   const entries = Object.values(providersByType);
-  const settled = await Promise.allSettled(
-    entries.map((p) => withSearchCache(p.id, query, () => p.search(query, signal))),
+  const settled = await Promise.all(
+    entries.map((p) =>
+      withBoundedWait(
+        withSearchCache(p.id, query, () => p.search(query, signal)),
+        PROVIDER_TIMEOUT_MS,
+      ),
+    ),
   );
 
   const results: SearchResultItem[] = [];
@@ -62,6 +123,8 @@ export async function searchAll(
   settled.forEach((outcome, i) => {
     if (outcome.status === "fulfilled") {
       results.push(...outcome.value);
+    } else if (outcome.status === "timed-out") {
+      failedSources.push(entries[i].id);
     } else if (!(outcome.reason instanceof DOMException)) {
       failedSources.push(entries[i].id);
     }
@@ -87,9 +150,17 @@ export async function searchAll(
     return (b.item.year ?? 0) - (a.item.year ?? 0);
   });
 
+  // Whether a provider failure/timeout is worth warning about at all: if
+  // the best surviving result is already a confident match (see
+  // STRONG_MATCH_THRESHOLD above), the failed provider — whatever it was
+  // — didn't have anything left to meaningfully add, so there's nothing
+  // to actually warn the user is "missing".
+  const hasStrongMatch = (scored[0]?.score ?? 0) >= STRONG_MATCH_THRESHOLD;
+
   return {
     results: scored.slice(0, MAX_RESULTS).map((r) => r.item),
     failedSources,
+    hasStrongMatch,
   };
 }
 

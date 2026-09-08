@@ -56,6 +56,12 @@ function editDistance(a: string, b: string): number {
 
 export const RELEVANCE_TIERS = {
   EXACT: 100,
+  // A title that's an exact match once a leading grammatical article is
+  // set aside — "The Office" for query "office" — is effectively the
+  // same title, not just "close" to it, so this sits just under true
+  // EXACT rather than down with VERY_CLOSE's off-by-one-character
+  // tolerance. See stripLeadingArticle() below.
+  EXACT_AFTER_ARTICLE: 96,
   VERY_CLOSE: 92,
   STARTS_WITH: 80,
   WORD_MATCH: 62,
@@ -64,11 +70,31 @@ export const RELEVANCE_TIERS = {
   NONE: 0,
 } as const;
 
+// English titles very commonly lead with a grammatical article ("The
+// Office", "A Star is Born") that a short, natural query never includes
+// ("office", "star is born") — without accounting for that, such a title
+// only ever qualifies for STARTS_WITH or WORD_MATCH further down, letting
+// an unrelated title that happens to literally start with the query
+// outrank it. Narrowly scoped on purpose: this only strips a single
+// leading article for the exact-match check immediately below: it does
+// not loosen STARTS_WITH, WORD_MATCH, or the typo tolerance further down.
+const LEADING_ARTICLES = ["the ", "a ", "an "];
+
+function stripLeadingArticle(value: string): string | null {
+  for (const article of LEADING_ARTICLES) {
+    if (value.startsWith(article) && value.length > article.length) {
+      return value.slice(article.length);
+    }
+  }
+  return null;
+}
+
 export function titleRelevance(title: string, rawQuery: string): number {
   const t = normalizeForMatch(title);
   const q = normalizeForMatch(rawQuery);
   if (!q) return RELEVANCE_TIERS.NONE;
   if (t === q) return RELEVANCE_TIERS.EXACT;
+  if (stripLeadingArticle(t) === q) return RELEVANCE_TIERS.EXACT_AFTER_ARTICLE;
 
   const dist = editDistance(t, q);
   if (dist <= 1) return RELEVANCE_TIERS.VERY_CLOSE;

@@ -160,3 +160,35 @@ export async function searchWithTypoFallback<T extends { title: string }>(
 
   return [];
 }
+
+// Minimal fallback for a provider whose own search already does real
+// fuzzy/typo matching server-side (TVmaze — confirmed against complete,
+// typo'd words) but doesn't reliably handle a genuinely *incomplete*
+// trailing word the user hasn't finished typing yet — e.g. "modern fam"
+// for "Modern Family", or "stranger thi" for "Stranger Things".
+// Deliberately much narrower than searchWithTypoFallback above: exactly
+// one retry, with only the last word dropped — no transposition/deletion
+// variants, since those exist purely to compensate for OMDb's total lack
+// of server-side fuzziness, which doesn't apply here. Relevance for both
+// the literal attempt and the retry is always judged against the
+// original, untruncated query (via hasRelevantMatch), never the retried
+// candidate itself, so the final cross-provider ranking step still scores
+// against what the user actually typed.
+export async function searchWithLastWordFallback<T extends { title: string }>(
+  query: string,
+  doSearch: (q: string) => Promise<T[]>,
+): Promise<T[]> {
+  const normalized = normalizeQuery(query);
+  const results = await doSearch(normalized);
+  if (hasRelevantMatch(results, normalized)) return results;
+
+  if (normalized.length < MIN_FALLBACK_LENGTH || normalized.length > MAX_FALLBACK_LENGTH) {
+    return [];
+  }
+
+  const dropped = dropLastWord(normalized);
+  if (!dropped) return [];
+
+  const retryResults = await doSearch(dropped);
+  return hasRelevantMatch(retryResults, normalized) ? retryResults : [];
+}
