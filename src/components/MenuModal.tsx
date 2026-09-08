@@ -93,6 +93,17 @@ export function MenuModal({ onClose, displayName, onSignOut }: MenuModalProps) {
             </a>
             .
           </p>
+          <p className="text-muted attribution">
+            Streaming availability information is provided by{" "}
+            <a
+              href="https://www.movieofthenight.com/about/api"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Streaming Availability API by Movie of the Night
+            </a>
+            .
+          </p>
         </section>
       </div>
     </Modal>

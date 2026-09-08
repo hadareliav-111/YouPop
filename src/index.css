@@ -1168,6 +1168,19 @@ a {
 
 /* ---------- Empty states ---------- */
 
+/* Centers an EmptyState within a scrolling `.app-screen__scroll` container
+   (min-height: 100% of that container, not flex: 1 1 auto — the scroll
+   container itself isn't a flex parent, unlike .home-screen__empty's own
+   flex-column context) so a screen like Recommendations reads with the
+   same overall vertically-centered composition as Home's own empty state,
+   without needing that screen's layout to match Home's structurally. */
+.screen-empty-center {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .empty-state {
   text-align: center;
   padding: 3.5rem 1.5rem;
@@ -1843,14 +1856,13 @@ a {
   border-radius: 3px;
 }
 
-.where-to-watch__attribution {
-  margin: 0.4rem 0 0;
+/* Only ever shown alongside "Not currently available in Israel" — a
+   coverage-limitation note, not a claim about Disney+ itself, so it stays
+   as quiet as the status line just above it. */
+.where-to-watch__disney-note {
+  margin: 0.3rem 0 0;
   font-size: 0.68rem;
   color: var(--color-text-muted);
-}
-
-.where-to-watch__attribution a {
-  color: inherit;
 }
 
 .item-detail__status {

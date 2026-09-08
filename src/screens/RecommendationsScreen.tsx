@@ -57,13 +57,15 @@ export function RecommendationsScreen({
 
       <div className="app-screen__scroll">
         {sorted.length === 0 ? (
-          <EmptyState
-            icon="⭐"
-            title="No recommendations yet"
-            message="Search for a movie or show you'd recommend to others."
-            actionLabel="+ Add Recommendation"
-            onAction={onAdd}
-          />
+          <div className="screen-empty-center">
+            <EmptyState
+              icon="⭐"
+              title="No recommendations yet"
+              message="Search for a movie or show you'd recommend to others."
+              actionLabel="+ Add Recommendation"
+              onAction={onAdd}
+            />
+          </div>
         ) : editOrderMode ? (
           <>
             <p className="text-muted reorder-hint">

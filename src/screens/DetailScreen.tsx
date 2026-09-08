@@ -499,6 +499,7 @@ export function DetailScreen({
                             {" — "}
                             <span className={`episode-progress__badge episode-progress__badge--${nextEpisodeStatus.availability}`}>
                               {nextEpisodeStatus.label}
+                              {nextEpisodeStatus.exactDate ? ` · ${nextEpisodeStatus.exactDate}` : ""}
                             </span>
                           </p>
                         ) : (

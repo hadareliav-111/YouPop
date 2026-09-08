@@ -142,7 +142,11 @@ Deno.serve(async (req) => {
   }
 
   if (!MOTN_API_KEY) {
-    return json({ providers: [], error: "Movie of the Night is not configured on the server." });
+    // A real server misconfiguration, not an answer — must be a non-2xx
+    // status (matching every other error path below) so the client's
+    // supabase-js call actually surfaces this as an error instead of
+    // treating a 200 response as a genuine "no providers" result.
+    return json({ providers: [], error: "Movie of the Night is not configured on the server." }, 502);
   }
 
   let externalSource: string;

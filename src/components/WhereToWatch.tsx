@@ -33,7 +33,12 @@ export function WhereToWatch({ externalSource, externalId }: WhereToWatchProps) 
       {!loading && (
         <>
           {providers.length === 0 ? (
-            <p className="text-muted where-to-watch__status">Not currently available in Israel</p>
+            <>
+              <p className="text-muted where-to-watch__status">Not currently available in Israel</p>
+              <p className="where-to-watch__disney-note">
+                Availability results do not currently include Disney+.
+              </p>
+            </>
           ) : (
             <div className="where-to-watch__providers">
               {providers.map((p) => (
@@ -57,16 +62,6 @@ export function WhereToWatch({ externalSource, externalId }: WhereToWatchProps) 
               ))}
             </div>
           )}
-
-          <p className="where-to-watch__attribution">
-            <a
-              href="https://www.movieofthenight.com/about/api"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Streaming availability information provided by Streaming Availability API by Movie of the Night
-            </a>
-          </p>
         </>
       )}
     </div>

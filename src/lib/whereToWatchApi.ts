@@ -91,13 +91,24 @@ async function resolveWhereToWatch(
   }
 
   const { data: fnData, error: fnError } = await withTimeout(
-    supabase.functions.invoke<{ providers: WhereToWatchProvider[] }>("motn-proxy", {
-      body: { externalSource, externalId },
-    }),
+    supabase.functions.invoke<{ providers: WhereToWatchProvider[]; error?: string }>(
+      "motn-proxy",
+      { body: { externalSource, externalId } },
+    ),
     MOTN_TIMEOUT_MS,
   );
   if (fnError) throw fnError;
-  return fnData?.providers ?? [];
+  // motn-proxy's own "not configured" response (missing MOTN_API_KEY)
+  // currently returns HTTP 200 with an `error` field rather than a non-2xx
+  // status — which supabase-js would otherwise treat as a successful,
+  // genuinely-empty answer. Treating any `error` field (or a missing body
+  // entirely) as a real failure here, on top of the non-2xx case above,
+  // is what keeps a server-side misconfiguration or quota exhaustion from
+  // ever being cached/shown as "confirmed not available in Israel".
+  if (!fnData || fnData.error) {
+    throw new Error(fnData?.error ?? "Where to Watch lookup returned no data.");
+  }
+  return fnData.providers ?? [];
 }
 
 export function fetchWhereToWatch(
