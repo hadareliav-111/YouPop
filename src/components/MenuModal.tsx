@@ -7,14 +7,19 @@ interface MenuModalProps {
   onClose: () => void;
   displayName: string | null;
   onSignOut: () => void;
+  // Whether the signed-in user is allowed to see the OMDb API Usage
+  // section below — gated by App.tsx on a fixed Supabase user id (never
+  // username, never rendered here or anywhere), since it's a shared,
+  // app-wide quota only meaningful to the app's own owner.
+  canViewOmdbUsage: boolean;
 }
 
-export function MenuModal({ onClose, displayName, onSignOut }: MenuModalProps) {
+export function MenuModal({ onClose, displayName, onSignOut, canViewOmdbUsage }: MenuModalProps) {
   const [usage, setUsage] = useState<OmdbUsage | null>(null);
   const [usageFailed, setUsageFailed] = useState(false);
 
   useEffect(() => {
-    if (!isOmdbConfigured()) return;
+    if (!canViewOmdbUsage || !isOmdbConfigured()) return;
     let cancelled = false;
     fetchOmdbUsage()
       .then((u) => {
@@ -27,7 +32,7 @@ export function MenuModal({ onClose, displayName, onSignOut }: MenuModalProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [canViewOmdbUsage]);
 
   return (
     <Modal title="Settings" onClose={onClose}>
@@ -40,6 +45,7 @@ export function MenuModal({ onClose, displayName, onSignOut }: MenuModalProps) {
           </button>
         </section>
 
+        {canViewOmdbUsage && (
         <section className="detail-section">
           <h3 className="detail-section__title">App-wide OMDb requests today</h3>
           {!isOmdbConfigured() ? (
@@ -79,6 +85,7 @@ export function MenuModal({ onClose, displayName, onSignOut }: MenuModalProps) {
             <p className="text-muted">Loading…</p>
           )}
         </section>
+        )}
 
         <section className="detail-section">
           <h3 className="detail-section__title">About</h3>

@@ -48,6 +48,13 @@ type Screen =
   | { kind: "friend-recommendation-detail"; id: string }
   | { kind: "friend-visibility"; friendshipId: string };
 
+// The OMDb API Usage section in Settings -> About is only meaningful to
+// the app owner (it's a shared, app-wide quota, not a per-user stat) —
+// gated on this fixed Supabase user id, never on username, so a username
+// change can never accidentally expose or hide it. Never rendered
+// anywhere in the UI itself — only this boolean derived from it is.
+const OMDB_USAGE_OWNER_USER_ID = "bff3f23d-8fdb-4acc-8bdf-d9a563473076";
+
 export default function App() {
   const { user, loading: authLoading, signIn, signOut } = useAuth();
 
@@ -692,6 +699,7 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
           onClose={() => setMenuOpen(false)}
           displayName={displayName}
           onSignOut={onSignOut}
+          canViewOmdbUsage={userId === OMDB_USAGE_OWNER_USER_ID}
         />
       )}
     </>
