@@ -1,5 +1,6 @@
 import type { Recommendation, WatchStatus } from "../types";
 import { mediaTypeLabel } from "../lib/mediaTypeLabel";
+import { OverflowMenu, type OverflowMenuItem } from "./OverflowMenu";
 
 interface RecommendationCardProps {
   recommendation: Recommendation;
@@ -39,6 +40,22 @@ export function RecommendationCard({
   onMarkWatched,
   eager,
 }: RecommendationCardProps) {
+  // Only true for Friends' Recommendations cards (see the props comment
+  // above) — the user's own Recommendations list never passes either
+  // handler, so this stays false there and the card renders exactly as
+  // before: no corner menu, no genres line.
+  const hasWatchlistActions = Boolean(onAddToWatchlist || onMarkWatched);
+
+  // Same three states the old inline buttons/disabled-button rendered —
+  // just relocated into the overflow menu instead of shown directly, with
+  // identical labels and identical onClick behavior.
+  const menuItems: OverflowMenuItem[] = watchlistStatus
+    ? [{ label: watchlistStatus === "watched" ? "✓ Watched" : "✓ In Watchlist", disabled: true }]
+    : [
+        ...(onAddToWatchlist ? [{ label: "+ Add to Watchlist", onSelect: onAddToWatchlist }] : []),
+        ...(onMarkWatched ? [{ label: "Watched", onSelect: onMarkWatched }] : []),
+      ];
+
   return (
     <div className="item-card">
       <button type="button" className="item-card__hit" onClick={onClick}>
@@ -54,7 +71,6 @@ export function RecommendationCard({
           ) : (
             <div className="item-card__poster item-card__poster--placeholder">🎬</div>
           )}
-          {isNew && <span className="item-card__new-badge">NEW</span>}
         </div>
         <div className="item-card__body">
           <h3 className="item-card__title">{recommendation.title}</h3>
@@ -62,42 +78,15 @@ export function RecommendationCard({
             {mediaTypeLabel(recommendation.mediaType, recommendation.tvSubtype)}
             {recommendation.releaseYear ? ` · ${recommendation.releaseYear}` : ""}
           </p>
+          {hasWatchlistActions && (recommendation.genres ?? []).length > 0 && (
+            <p className="item-card__genres">{recommendation.genres.slice(0, 3).join(" · ")}</p>
+          )}
         </div>
       </button>
-      {(onAddToWatchlist || onMarkWatched) && (
-        <div className="item-card__watchlist-actions">
-          {watchlistStatus ? (
-            <button type="button" className="item-card__add-watchlist-btn" disabled>
-              {watchlistStatus === "watched" ? "✓ Watched" : "✓ In Watchlist"}
-            </button>
-          ) : (
-            <>
-              {onAddToWatchlist && (
-                <button
-                  type="button"
-                  className="item-card__add-watchlist-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddToWatchlist();
-                  }}
-                >
-                  + Add to Watchlist
-                </button>
-              )}
-              {onMarkWatched && (
-                <button
-                  type="button"
-                  className="item-card__watched-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onMarkWatched();
-                  }}
-                >
-                  Watched
-                </button>
-              )}
-            </>
-          )}
+      {(isNew || hasWatchlistActions) && (
+        <div className="item-card__corner-actions">
+          {isNew && <span className="item-card__new-badge">NEW</span>}
+          {hasWatchlistActions && <OverflowMenu ariaLabel="Watchlist actions" items={menuItems} />}
         </div>
       )}
     </div>

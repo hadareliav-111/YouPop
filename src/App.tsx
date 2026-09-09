@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { HomeScreen } from "./screens/HomeScreen";
 import { CategoryScreen } from "./screens/CategoryScreen";
 import { WatchedScreen } from "./screens/WatchedScreen";
@@ -57,12 +57,41 @@ const OMDB_USAGE_OWNER_USER_ID = "bff3f23d-8fdb-4acc-8bdf-d9a563473076";
 
 export default function App() {
   const { user, loading: authLoading, signIn, signOut } = useAuth();
+  // Set once WatchlistApp's own initial data (see its onReady below) has
+  // loaded. Only meaningful when there's a signed-in user — LoginScreen
+  // has no equivalent data phase, so the splash never waits on this in
+  // that branch (see `ready` below).
+  const [appDataReady, setAppDataReady] = useState(false);
+  const handleWatchlistReady = useCallback(() => setAppDataReady(true), []);
+
+  // The splash stays up until BOTH auth has resolved AND, if there's a
+  // signed-in user, WatchlistApp's own first-load has finished — i.e. the
+  // exact same point at which it stops returning null below and renders
+  // the real first screen. Nothing here changes when that boundary is;
+  // it only extends what the splash waits on to match it.
+  const ready = !authLoading && (user ? appDataReady : true);
+
+  // Dismisses the static splash markup in index.html (outside React's own
+  // root, so it's already visible on the very first paint, before this
+  // component even mounts) once the app is actually ready to show its
+  // first screen. React 18/19 always commits at least one render before
+  // an effect can run, so the splash is guaranteed at least one paint
+  // frame even when everything resolves essentially instantly, which is
+  // what keeps the transition a smooth fade rather than a hard cut.
+  useEffect(() => {
+    if (!ready) return;
+    const splash = document.getElementById("app-splash");
+    if (!splash) return;
+    splash.classList.add("app-splash--hidden");
+    const timer = setTimeout(() => splash.remove(), 250);
+    return () => clearTimeout(timer);
+  }, [ready]);
 
   return (
     <div className="app-shell">
       {!authLoading &&
         (user ? (
-          <WatchlistApp userId={user.id} onSignOut={signOut} />
+          <WatchlistApp userId={user.id} onSignOut={signOut} onReady={handleWatchlistReady} />
         ) : (
           <LoginScreen onSignIn={signIn} />
         ))}
@@ -73,9 +102,13 @@ export default function App() {
 interface WatchlistAppProps {
   userId: string;
   onSignOut: () => void;
+  // Called once initial data has loaded and this component is about to
+  // render its real first screen instead of null — see the itemsLoading
+  // check below. Only used by App.tsx to know when to dismiss the splash.
+  onReady?: () => void;
 }
 
-function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
+function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
   const {
     items,
     loading: itemsLoading,
@@ -390,6 +423,14 @@ function WatchlistApp({ userId, onSignOut }: WatchlistAppProps) {
         return null;
     }
   };
+
+  // Reports the exact same transition this early-return already gates on
+  // — fires once, the first time itemsLoading goes from true to false —
+  // so App.tsx can keep the splash up until this component is actually
+  // about to render the real first screen instead of null.
+  useEffect(() => {
+    if (!itemsLoading) onReady?.();
+  }, [itemsLoading, onReady]);
 
   if (itemsLoading) {
     return null;

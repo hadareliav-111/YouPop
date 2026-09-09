@@ -6,6 +6,7 @@ import { mediaTypeLabel } from "../lib/mediaTypeLabel";
 import { getReleaseAvailability, formatComingLabel } from "../lib/availability";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { OverflowMenu } from "../components/OverflowMenu";
 import { StarRating } from "../components/StarRating";
 import { TagInput } from "../components/TagInput";
 import { EpisodePicker } from "../components/ItemDetail/EpisodePicker";
@@ -209,14 +210,12 @@ export function DetailScreen({
         title={item.title}
         onBack={onBack}
         right={
-          <button
-            type="button"
-            className="icon-btn icon-btn--danger"
-            aria-label="Delete item"
-            onClick={() => setConfirmingDelete(true)}
-          >
-            🗑
-          </button>
+          <OverflowMenu
+            ariaLabel="More actions"
+            items={[
+              { label: "Delete", danger: true, onSelect: () => setConfirmingDelete(true) },
+            ]}
+          />
         }
       />
 

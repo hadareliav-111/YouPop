@@ -84,6 +84,25 @@ export function FriendsRecommendationsScreen({
 
       <div className="app-screen__scroll">
         {filteredGroups.map((group) => {
+          // An empty rail skips PosterRail entirely rather than passing it
+          // a compact emptyState — PosterRail's own empty slot (.poster-rail__empty)
+          // is a full-height, boxed placeholder by design (matching how a
+          // real rail of tiles fills that same space), which is exactly the
+          // "large gray rectangle" this needs to not be. The header markup
+          // below intentionally mirrors PosterRail's own header exactly
+          // (same classes) so a friend's title still reads identically
+          // whether or not they currently have recommendations.
+          if (group.recommendations.length === 0) {
+            return (
+              <div className="friend-rec-rail friend-rec-rail--empty" key={group.friendUserId}>
+                <div className="poster-rail__header">
+                  <h2 className="poster-rail__title">{group.username}'s Recommendations</h2>
+                </div>
+                <p className="text-muted friend-rec-rail__empty-text">No recommendations yet.</p>
+              </div>
+            );
+          }
+
           const badges: Record<string, string> = {};
           for (const rec of group.recommendations) {
             if (isNew(rec.id)) badges[rec.id] = "NEW";

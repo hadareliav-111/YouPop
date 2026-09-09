@@ -3,6 +3,7 @@ import type { Recommendation, WatchStatus } from "../types";
 import { mediaTypeLabel } from "../lib/mediaTypeLabel";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { OverflowMenu } from "../components/OverflowMenu";
 import { WhereToWatch } from "../components/WhereToWatch";
 import type { FriendEntry } from "../hooks/useFriends";
 import { useSwipeBack } from "../hooks/useSwipeBack";
@@ -82,14 +83,12 @@ export function RecommendationDetailScreen({
         onBack={onBack}
         right={
           readOnly ? undefined : (
-            <button
-              type="button"
-              className="icon-btn icon-btn--danger"
-              aria-label="Delete recommendation"
-              onClick={() => setConfirmingDelete(true)}
-            >
-              🗑
-            </button>
+            <OverflowMenu
+              ariaLabel="More actions"
+              items={[
+                { label: "Delete", danger: true, onSelect: () => setConfirmingDelete(true) },
+              ]}
+            />
           )
         }
       />

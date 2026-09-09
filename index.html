@@ -6,7 +6,7 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#141420" />
+    <meta name="theme-color" content="#121018" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="YouPop" />
     <meta
@@ -14,8 +14,63 @@
       content="A personal watchlist for movies, TV shows, and reality shows."
     />
     <title>YouPop</title>
+    <style>
+      /* Inline and critical on purpose: must be able to paint before the
+         app's own stylesheet (index.css) has loaded, so the very first
+         frame already matches YouPop's own dark background instead of
+         the browser's default white. Colors are hardcoded to match
+         index.css's --color-bg/--color-text/--color-primary tokens
+         exactly, since those custom properties aren't guaranteed to be
+         available yet at this point. html/body get the same background
+         directly (not just #app-splash) as a safety net — the browser's
+         own default white canvas otherwise still exists underneath for
+         any instant before #app-splash's own box has been laid out and
+         painted, even though it covers the viewport once it has. */
+      html, body {
+        background: #121018;
+      }
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        background: #121018;
+        transition: opacity 220ms ease;
+      }
+      #app-splash.app-splash--hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #app-splash__icon {
+        width: 4.5rem;
+        height: 4.5rem;
+        animation: app-splash-pulse 1.6s ease-in-out infinite;
+      }
+      #app-splash__title {
+        margin: 0;
+        font: 800 1.1rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Inter, Helvetica, Arial, sans-serif;
+        letter-spacing: -0.01em;
+        color: #f1eef7;
+      }
+      @keyframes app-splash-pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.08); opacity: 0.85; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #app-splash__icon { animation: none; }
+      }
+    </style>
   </head>
   <body>
+    <div id="app-splash" aria-hidden="true">
+      <img id="app-splash__icon" src="/splash-icon.png" alt="" />
+      <p id="app-splash__title">YouPop</p>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
