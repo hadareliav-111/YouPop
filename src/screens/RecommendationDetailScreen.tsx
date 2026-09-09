@@ -68,6 +68,14 @@ export function RecommendationDetailScreen({
   const showSharing = !readOnly && friends && friends.length > 0 && onEditSharing;
   const currentHidden = hiddenFriendshipIds ?? new Set<string>();
 
+  // Same IMDb/Rotten Tomatoes-only rule as DetailScreen.tsx (see its own
+  // comment) — no Metacritic, no TVmaze, and no fallback to
+  // recommendation.externalRating (which can itself just be TVmaze's own
+  // average) when neither is available. Purely a display-time filter.
+  const detailRatings = (recommendation.externalRatings ?? []).filter(
+    (r) => r.source === "IMDb" || r.source === "Rotten Tomatoes",
+  );
+
   // Edge-swipe-to-go-back — covers both the user's own recommendation
   // detail and a friend's (readOnly) recommendation detail, since both
   // render through this same component. See useSwipeBack's own comment
@@ -114,18 +122,14 @@ export function RecommendationDetailScreen({
               {(recommendation.genres ?? []).length > 0 && (
                 <p className="item-detail__genres">{recommendation.genres.join(" · ")}</p>
               )}
-              {(recommendation.externalRatings ?? []).length > 0 ? (
+              {detailRatings.length > 0 && (
                 <div className="item-detail__ratings">
-                  {recommendation.externalRatings.map((r) => (
+                  {detailRatings.map((r) => (
                     <span className="item-detail__rating-chip" key={r.source}>
                       <strong>{r.value}</strong> {r.source}
                     </span>
                   ))}
                 </div>
-              ) : (
-                recommendation.externalRating !== null && (
-                  <p className="item-detail__rating">★ {recommendation.externalRating.toFixed(1)}</p>
-                )
               )}
               <WhereToWatch
                 externalSource={recommendation.externalSource}

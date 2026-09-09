@@ -195,6 +195,21 @@ export function DetailScreen({
     item.status === "want_to_watch" &&
     getReleaseAvailability(item.releaseDate) === "upcoming";
 
+  // This screen's ratings breakdown is IMDb/Rotten Tomatoes only, with no
+  // fallback to anything else — item.externalRatings can also carry
+  // Metacritic (OMDb) or "TVmaze" (TVmaze's own rating, used before/without
+  // OMDb enrichment — see DetailScreen's own OMDb-backfill effect above),
+  // and item.externalRating (the single primary number, used elsewhere for
+  // card display) can itself just be TVmaze's own average for an
+  // un-enriched TV show — neither belongs here. If neither IMDb nor Rotten
+  // Tomatoes is available yet, no external rating shows at all rather than
+  // falling back to one of those. Purely a display-time filter: the
+  // underlying item/externalRatings data is unchanged, so card display and
+  // everything else stays as-is.
+  const detailRatings = (item.externalRatings ?? []).filter(
+    (r) => r.source === "IMDb" || r.source === "Rotten Tomatoes",
+  );
+
   return (
     <div className="app-screen" {...swipeBack}>
       <ScreenHeader
@@ -236,18 +251,14 @@ export function DetailScreen({
               {(item.genres ?? []).length > 0 && (
                 <p className="item-detail__genres">{item.genres.join(" · ")}</p>
               )}
-              {(item.externalRatings ?? []).length > 0 ? (
+              {detailRatings.length > 0 && (
                 <div className="item-detail__ratings">
-                  {item.externalRatings.map((r) => (
+                  {detailRatings.map((r) => (
                     <span className="item-detail__rating-chip" key={r.source}>
                       <strong>{r.value}</strong> {r.source}
                     </span>
                   ))}
                 </div>
-              ) : (
-                item.externalRating !== null && (
-                  <p className="item-detail__rating">★ {item.externalRating.toFixed(1)}</p>
-                )
               )}
               <WhereToWatch externalSource={item.externalSource} externalId={item.externalId} />
             </div>

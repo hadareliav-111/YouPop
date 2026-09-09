@@ -1780,12 +1780,6 @@ a {
   font-size: 0.85rem;
 }
 
-.item-detail__rating {
-  margin: 0;
-  color: var(--color-star);
-  font-weight: 700;
-}
-
 .item-detail__ratings {
   display: flex;
   flex-wrap: wrap;
