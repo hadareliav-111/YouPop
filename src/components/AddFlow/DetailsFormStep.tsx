@@ -2,18 +2,15 @@ import { useState } from "react";
 import type { FullDetails } from "../../lib/providers";
 import type { NewItemDraft } from "../../types";
 import { mediaTypeLabel } from "../../lib/mediaTypeLabel";
-import { TagInput } from "../TagInput";
 
 interface DetailsFormStepProps {
   details: FullDetails;
-  existingTags: string[];
   onCancel: () => void;
   onSubmit: (draft: NewItemDraft) => void;
 }
 
 export function DetailsFormStep({
   details,
-  existingTags,
   onCancel,
   onSubmit,
 }: DetailsFormStepProps) {
@@ -23,7 +20,6 @@ export function DetailsFormStep({
   const [recommendedBy, setRecommendedBy] = useState("");
   const [recommendationNote, setRecommendationNote] = useState("");
   const [notes, setNotes] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
 
   const canSubmit = isRecommendation !== null;
 
@@ -59,9 +55,9 @@ export function DetailsFormStep({
         </div>
       </div>
 
-      <fieldset className="details-form__field">
-        <legend>Is this a recommendation?</legend>
-        <div className="segmented">
+      <div className="details-form__field">
+        <label id="add-is-recommendation-label">Is this a recommendation?</label>
+        <div className="segmented" role="group" aria-labelledby="add-is-recommendation-label">
           <button
             type="button"
             className={`segmented__option ${isRecommendation === true ? "is-active" : ""}`}
@@ -77,7 +73,7 @@ export function DetailsFormStep({
             No
           </button>
         </div>
-      </fieldset>
+      </div>
 
       {isRecommendation === true && (
         <>
@@ -118,11 +114,6 @@ export function DetailsFormStep({
         />
       </div>
 
-      <div className="details-form__field">
-        <label>Personal tags (optional)</label>
-        <TagInput tags={tags} onChange={setTags} suggestions={existingTags} />
-      </div>
-
       <div className="details-form__actions">
         <button type="button" className="btn btn--ghost" onClick={onCancel}>
           Cancel
@@ -137,7 +128,6 @@ export function DetailsFormStep({
               recommendedBy,
               recommendationNote,
               personalNotes: notes,
-              personalTags: tags,
             })
           }
         >

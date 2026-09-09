@@ -151,9 +151,6 @@ export function normalizeItem(candidate: Partial<WatchlistItem>): WatchlistItem 
     recommendedBy: candidate.recommendedBy ?? null,
     recommendationNote: candidate.recommendationNote ?? null,
     personalNotes: candidate.personalNotes ?? null,
-    personalTags: Array.isArray(candidate.personalTags)
-      ? candidate.personalTags
-      : [],
     // Sentinel for "no valid manual order yet" — normalizeSortOrders (always
     // run right after this) resolves it to a real 0..N-1 position, placing
     // unordered items after any that already have one, in their existing

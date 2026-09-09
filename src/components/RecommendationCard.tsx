@@ -34,33 +34,31 @@ export function RecommendationCard({
   eager,
 }: RecommendationCardProps) {
   return (
-    <div className="item-card">
-      <button type="button" className="item-card__hit" onClick={onClick}>
-        <div className="item-card__poster-wrap">
-          {recommendation.posterUrl ? (
-            <img
-              className="item-card__poster"
-              src={recommendation.posterUrl}
-              alt=""
-              loading={eager ? undefined : "lazy"}
-              decoding={eager ? undefined : "async"}
-            />
-          ) : (
-            <div className="item-card__poster item-card__poster--placeholder">🎬</div>
-          )}
-          {isNew && <span className="item-card__new-badge">NEW</span>}
-        </div>
-        <div className="item-card__body">
-          <h3 className="item-card__title">{recommendation.title}</h3>
-          <p className="item-card__meta">
-            {mediaTypeLabel(recommendation.mediaType, recommendation.tvSubtype)}
-            {recommendation.releaseYear ? ` · ${recommendation.releaseYear}` : ""}
-          </p>
-          {showGenres && (recommendation.genres ?? []).length > 0 && (
-            <p className="item-card__genres">{recommendation.genres.slice(0, 3).join(" · ")}</p>
-          )}
-        </div>
-      </button>
-    </div>
+    <button type="button" className="item-card" onClick={onClick}>
+      <div className="item-card__poster-wrap">
+        {recommendation.posterUrl ? (
+          <img
+            className="item-card__poster"
+            src={recommendation.posterUrl}
+            alt=""
+            loading={eager ? undefined : "lazy"}
+            decoding={eager ? undefined : "async"}
+          />
+        ) : (
+          <div className="item-card__poster item-card__poster--placeholder">🎬</div>
+        )}
+        {isNew && <span className="item-card__new-badge">NEW</span>}
+      </div>
+      <div className="item-card__body">
+        <h3 className="item-card__title">{recommendation.title}</h3>
+        <p className="item-card__meta">
+          {mediaTypeLabel(recommendation.mediaType, recommendation.tvSubtype)}
+          {recommendation.releaseYear ? ` · ${recommendation.releaseYear}` : ""}
+        </p>
+        {showGenres && (recommendation.genres ?? []).length > 0 && (
+          <p className="item-card__genres">{recommendation.genres.slice(0, 3).join(" · ")}</p>
+        )}
+      </div>
+    </button>
   );
 }

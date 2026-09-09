@@ -65,8 +65,6 @@ export interface WatchlistItem {
 
   personalNotes: string | null; // free-text notes, independent of recommendation, available on every item
 
-  personalTags: string[];
-
   // Manual "how much I want to watch this" position, scoped within this
   // item's own mediaType category (movies rank against movies, tv against
   // tv) so reordering one category never touches another's order. Lower
@@ -83,7 +81,6 @@ export interface NewItemDraft {
   recommendedBy: string;
   recommendationNote: string;
   personalNotes: string;
-  personalTags: string[];
 }
 
 export const EXPORT_SCHEMA_VERSION = 2;

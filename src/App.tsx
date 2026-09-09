@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { HomeScreen } from "./screens/HomeScreen";
 import { CategoryScreen } from "./screens/CategoryScreen";
 import { WatchedScreen } from "./screens/WatchedScreen";
 import { AddScreen } from "./screens/AddScreen";
 import { DetailScreen } from "./screens/DetailScreen";
+import { EditWatchlistItemScreen } from "./screens/EditWatchlistItemScreen";
 import { LoginScreen } from "./screens/LoginScreen";
 import { RecommendationsScreen } from "./screens/RecommendationsScreen";
 import { AddRecommendationScreen } from "./screens/AddRecommendationScreen";
@@ -36,6 +37,7 @@ type Screen =
   | { kind: "watched" }
   | { kind: "add" }
   | { kind: "detail"; itemId: string }
+  | { kind: "edit-item"; itemId: string }
   | { kind: "recommendations" }
   | { kind: "add-recommendation" }
   | { kind: "recommendation-detail"; id: string }
@@ -214,14 +216,13 @@ function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
       },
     ]);
 
-  const tags = useMemo(() => {
-    const set = new Set<string>();
-    items.forEach((item) => item.personalTags.forEach((t) => set.add(t)));
-    return Array.from(set).sort();
-  }, [items]);
-
   const selectedItem =
     screen.kind === "detail"
+      ? items.find((item) => item.id === screen.itemId) ?? null
+      : null;
+
+  const selectedItemForEdit =
+    screen.kind === "edit-item"
       ? items.find((item) => item.id === screen.itemId) ?? null
       : null;
 
@@ -301,7 +302,6 @@ function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
       recommendedBy: friendUsername,
       recommendationNote: rec.note,
       personalNotes: null,
-      personalTags: [],
       sortOrder: 0,
       dateAdded: now,
       dateWatched: status === "watched" ? now : null,
@@ -318,7 +318,8 @@ function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
   // `add-recommendation` only from `recommendations`; `add-friend` and
   // `friend-visibility` only from `friends`; `friend-recommendations` only
   // from `friends-recommendations`; `detail` from `home`, `category`, or
-  // `watched`; `recommendation-detail` only from `recommendations`;
+  // `watched`; `edit-item` (swipe-enabled, same as `detail`) only from
+  // `detail`; `recommendation-detail` only from `recommendations`;
   // `friend-recommendation-detail` from `friends-recommendations` or
   // `friend-recommendations`. That's the complete set below — every other
   // screen kind can never legitimately appear as a backdrop given how
@@ -360,6 +361,27 @@ function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
         );
       case "watched":
         return <WatchedScreen items={items} onBack={() => {}} onSelectItem={() => {}} />;
+      case "detail": {
+        const backdropItem = items.find((i) => i.id === s.itemId);
+        if (!backdropItem) return null;
+        return (
+          <DetailScreen
+            item={backdropItem}
+            onBack={() => {}}
+            onEdit={() => {}}
+            onUpdate={() => {}}
+            onMarkWatched={() => {}}
+            onMarkWantToWatch={() => {}}
+            onMarkCurrentlyWatching={() => {}}
+            onSetCurrentEpisode={() => {}}
+            onSetRating={() => {}}
+            onDelete={() => {}}
+            isRecommended={alreadyRecommended(backdropItem.externalSource, backdropItem.externalId)}
+            friends={friends}
+            onAddToRecommendations={() => {}}
+          />
+        );
+      }
       case "recommendations":
         return (
           <RecommendationsScreen
@@ -491,7 +513,6 @@ function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
           <AddScreen
             onClose={popScreen}
             onAdd={addItem}
-            existingTags={tags}
             isAlreadyAdded={alreadyAdded}
             onSwipeActiveChange={setSwipeActive}
           />
@@ -501,8 +522,8 @@ function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
           <ErrorBoundary key={selectedItem.id} label="This item's details">
             <DetailScreen
               item={selectedItem}
-              existingTags={tags}
               onBack={popScreen}
+              onEdit={() => pushScreen({ kind: "edit-item", itemId: selectedItem.id })}
               onUpdate={(patch) => updateItem(selectedItem.id, patch)}
               onMarkWatched={() => markWatched(selectedItem.id)}
               onMarkWantToWatch={() => markWantToWatch(selectedItem.id)}
@@ -547,6 +568,18 @@ function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
               onSwipeActiveChange={setSwipeActive}
             />
           </ErrorBoundary>
+        )}
+
+        {screen.kind === "edit-item" && selectedItemForEdit && (
+          <EditWatchlistItemScreen
+            item={selectedItemForEdit}
+            onBack={popScreen}
+            onSave={(patch) => {
+              updateItem(selectedItemForEdit.id, patch);
+              popScreen();
+            }}
+            onSwipeActiveChange={setSwipeActive}
+          />
         )}
 
         {screen.kind === "recommendations" && (

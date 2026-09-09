@@ -36,12 +36,6 @@ export function WatchedScreen({ items, onBack, onSelectItem, onSwipeActiveChange
     return Array.from(set).sort();
   }, [watchedItems]);
 
-  const tags = useMemo(() => {
-    const set = new Set<string>();
-    watchedItems.forEach((item) => item.personalTags.forEach((t) => set.add(t)));
-    return Array.from(set).sort();
-  }, [watchedItems]);
-
   const recommenders = useMemo(() => {
     const set = new Set<string>();
     watchedItems.forEach((item) => {
@@ -54,7 +48,6 @@ export function WatchedScreen({ items, onBack, onSelectItem, onSwipeActiveChange
     const filtered = watchedItems.filter((item) => {
       if (filters.mediaType !== "all" && item.mediaType !== filters.mediaType) return false;
       if (filters.genre && !item.genres.includes(filters.genre)) return false;
-      if (filters.tag && !item.personalTags.includes(filters.tag)) return false;
       if (filters.recommended === "yes" && !item.isRecommendation) return false;
       if (filters.recommended === "no" && item.isRecommendation) return false;
       if (filters.recommender && item.recommendedBy !== filters.recommender) return false;
@@ -77,7 +70,6 @@ export function WatchedScreen({ items, onBack, onSelectItem, onSwipeActiveChange
   const filtersActive =
     filters.mediaType !== "all" ||
     Boolean(filters.genre) ||
-    Boolean(filters.tag) ||
     filters.recommended !== "all" ||
     Boolean(filters.recommender);
 
@@ -88,7 +80,6 @@ export function WatchedScreen({ items, onBack, onSelectItem, onSwipeActiveChange
         filters={filters}
         onChange={setFilters}
         genres={genres}
-        tags={tags}
         recommenders={recommenders}
         hideMoreFilters
       />

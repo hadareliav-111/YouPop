@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import type { EpisodeRef, WatchlistItem } from "../types";
-import { getDetails, getEpisodes, isOmdbConfigured, type TvmazeEpisode } from "../lib/providers";
+import {
+  getCachedEpisodes,
+  getDetails,
+  getEpisodes,
+  isOmdbConfigured,
+  type TvmazeEpisode,
+} from "../lib/providers";
 import { getNextEpisodeStatus, episodeLabel } from "../lib/episodeProgress";
 import { mediaTypeLabel } from "../lib/mediaTypeLabel";
 import { getReleaseAvailability, formatComingLabel } from "../lib/availability";
@@ -8,7 +14,6 @@ import { ScreenHeader } from "../components/ScreenHeader";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { OverflowMenu } from "../components/OverflowMenu";
 import { StarRating } from "../components/StarRating";
-import { TagInput } from "../components/TagInput";
 import { EpisodePicker } from "../components/ItemDetail/EpisodePicker";
 import { Modal } from "../components/Modal";
 import { WhereToWatch } from "../components/WhereToWatch";
@@ -24,8 +29,8 @@ const STATUS_LABEL: Record<WatchlistItem["status"], string> = {
 
 interface DetailScreenProps {
   item: WatchlistItem;
-  existingTags: string[];
   onBack: () => void;
+  onEdit: () => void;
   onUpdate: (patch: Partial<WatchlistItem>) => void;
   onMarkWatched: () => void;
   onMarkWantToWatch: () => void;
@@ -52,8 +57,8 @@ interface DetailScreenProps {
 // to the bottom edge by design.
 export function DetailScreen({
   item,
-  existingTags,
   onBack,
+  onEdit,
   onUpdate,
   onMarkWatched,
   onMarkWantToWatch,
@@ -66,7 +71,6 @@ export function DetailScreen({
   friends,
   onSwipeActiveChange,
 }: DetailScreenProps) {
-  const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -118,22 +122,30 @@ export function DetailScreen({
     onAddToRecommendations(audienceMode, hiddenFriendshipIds);
     setAudienceModalOpen(false);
   };
-  const [episodes, setEpisodes] = useState<TvmazeEpisode[]>([]);
-  const [episodesLoading, setEpisodesLoading] = useState(false);
-
-  // Edit-mode draft state, seeded from the item when edit starts.
-  const [draftIsRec, setDraftIsRec] = useState(item.isRecommendation);
-  const [draftBy, setDraftBy] = useState(item.recommendedBy ?? "");
-  const [draftNote, setDraftNote] = useState(item.recommendationNote ?? "");
-  const [draftNotes, setDraftNotes] = useState(item.personalNotes ?? "");
-  const [draftTags, setDraftTags] = useState<string[]>(item.personalTags);
-
   const isCurrentlyWatchingTv = item.mediaType === "tv" && item.status === "currently_watching";
+
+  // Seeded synchronously from the shared episodes cache (see
+  // useNextEpisodes.ts's own comment on getCachedEpisodes for the full
+  // rationale) — this screen fully unmounts/remounts on every Edit Save/
+  // Cancel round trip (same as any push/pop in this app), and without this,
+  // a currently-watching show's remount always started from "Loading
+  // episodes…" for a frame even though this exact item's episodes were
+  // already fetched moments ago by the previous mount of this same screen.
+  const [episodes, setEpisodes] = useState<TvmazeEpisode[]>(() =>
+    isCurrentlyWatchingTv ? getCachedEpisodes(item.externalSource, item.externalId) ?? [] : [],
+  );
+  const [episodesLoading, setEpisodesLoading] = useState(
+    () => isCurrentlyWatchingTv && !getCachedEpisodes(item.externalSource, item.externalId),
+  );
 
   useEffect(() => {
     if (!isCurrentlyWatchingTv) return;
     let cancelled = false;
-    setEpisodesLoading(true);
+    // Only flips to a visible loading state when nothing's cached yet — a
+    // cache hit here would otherwise still cost one render at
+    // episodesLoading=true (getEpisodes() resolves a microtask later even
+    // on a hit) after having just seeded true above.
+    if (!getCachedEpisodes(item.externalSource, item.externalId)) setEpisodesLoading(true);
     getEpisodes(item.externalSource, item.externalId).then((eps) => {
       if (cancelled) return;
       setEpisodes(eps);
@@ -182,27 +194,6 @@ export function DetailScreen({
   const isUpcoming =
     item.status === "want_to_watch" &&
     getReleaseAvailability(item.releaseDate) === "upcoming";
-
-  const startEditing = () => {
-    setDraftIsRec(item.isRecommendation);
-    setDraftBy(item.recommendedBy ?? "");
-    setDraftNote(item.recommendationNote ?? "");
-    setDraftNotes(item.personalNotes ?? "");
-    setDraftTags(item.personalTags);
-    setEditing(true);
-  };
-
-  const saveEditing = () => {
-    onUpdate({
-      isRecommendation: draftIsRec,
-      recommendedBy: draftIsRec && draftBy.trim() ? draftBy.trim() : null,
-      recommendationNote:
-        draftIsRec && draftNote.trim() ? draftNote.trim() : null,
-      personalNotes: draftNotes.trim() ? draftNotes.trim() : null,
-      personalTags: draftTags,
-    });
-    setEditing(false);
-  };
 
   return (
     <div className="app-screen" {...swipeBack}>
@@ -284,145 +275,38 @@ export function DetailScreen({
 
           <section className="detail-section">
             <div className="detail-section__header">
-              <h3 className="detail-section__title">Recommendation</h3>
-              {!editing && (
-                <button type="button" className="link-btn" onClick={startEditing}>
-                  Edit
-                </button>
-              )}
+              <h3 className="detail-section__title">Details</h3>
+              <button type="button" className="link-btn" onClick={onEdit}>
+                Edit
+              </button>
             </div>
 
-            {!editing && (
-              <>
-                {item.isRecommendation ? (
-                  <div className="recommendation-box">
-                    {item.recommendedBy && (
-                      <span className="recommend-chip">
-                        Recommended by {item.recommendedBy}
-                      </span>
-                    )}
-                    {item.recommendationNote && (
-                      <p className="recommendation-box__note">
-                        "{item.recommendationNote}"
-                      </p>
-                    )}
-                    {!item.recommendedBy && !item.recommendationNote && (
-                      <p className="text-muted">This is a recommendation.</p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-muted">Not a recommendation.</p>
+            {item.isRecommendation ? (
+              <div className="recommendation-box">
+                {item.recommendedBy && (
+                  <span className="recommend-chip">
+                    Recommended by {item.recommendedBy}
+                  </span>
                 )}
-              </>
+                {item.recommendationNote && (
+                  <p className="recommendation-box__note">
+                    "{item.recommendationNote}"
+                  </p>
+                )}
+                {!item.recommendedBy && !item.recommendationNote && (
+                  <p className="text-muted">This is a recommendation.</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-muted">Not a recommendation.</p>
             )}
 
-            {editing && (
-              <div className="details-form">
-                <fieldset className="details-form__field">
-                  <legend>Is this a recommendation?</legend>
-                  <div className="segmented">
-                    <button
-                      type="button"
-                      className={`segmented__option ${draftIsRec ? "is-active" : ""}`}
-                      onClick={() => setDraftIsRec(true)}
-                    >
-                      Yes
-                    </button>
-                    <button
-                      type="button"
-                      className={`segmented__option ${!draftIsRec ? "is-active" : ""}`}
-                      onClick={() => setDraftIsRec(false)}
-                    >
-                      No
-                    </button>
-                  </div>
-                </fieldset>
-
-                {draftIsRec && (
-                  <>
-                    <div className="details-form__field">
-                      <label htmlFor="edit-recommended-by">Who recommended it?</label>
-                      <input
-                        id="edit-recommended-by"
-                        type="text"
-                        dir="auto"
-                        value={draftBy}
-                        onChange={(e) => setDraftBy(e.target.value)}
-                      />
-                    </div>
-                    <div className="details-form__field">
-                      <label htmlFor="edit-recommendation-note">What did they say?</label>
-                      <textarea
-                        id="edit-recommendation-note"
-                        dir="auto"
-                        rows={2}
-                        value={draftNote}
-                        onChange={(e) => setDraftNote(e.target.value)}
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="details-form__field">
-                  <label htmlFor="edit-personal-notes">Notes</label>
-                  <textarea
-                    id="edit-personal-notes"
-                    dir="auto"
-                    rows={2}
-                    value={draftNotes}
-                    onChange={(e) => setDraftNotes(e.target.value)}
-                    placeholder="Anything you want to remember about this"
-                  />
-                </div>
-
-                <div className="details-form__field">
-                  <label>My tags</label>
-                  <TagInput
-                    tags={draftTags}
-                    onChange={setDraftTags}
-                    suggestions={existingTags}
-                  />
-                </div>
-
-                <div className="details-form__actions">
-                  <button
-                    type="button"
-                    className="btn btn--ghost"
-                    onClick={() => setEditing(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn--primary"
-                    onClick={saveEditing}
-                  >
-                    Save changes
-                  </button>
-                </div>
-              </div>
+            {item.personalNotes && (
+              <p className="item-detail__notes item-detail__notes--in-details">
+                {item.personalNotes}
+              </p>
             )}
           </section>
-
-          {!editing && item.personalNotes && (
-            <section className="detail-section">
-              <h3 className="detail-section__title">Notes</h3>
-              <p className="item-detail__notes">{item.personalNotes}</p>
-            </section>
-          )}
-
-          {!editing && (item.personalTags ?? []).length > 0 && (
-            <section className="detail-section">
-              <h3 className="detail-section__title">My tags</h3>
-              <div className="tag-input__chips">
-                {item.personalTags.map((tag) => (
-                  <span className="chip" key={tag}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </section>
-          )}
 
           <section className="detail-section">
             <h3 className="detail-section__title">Status</h3>

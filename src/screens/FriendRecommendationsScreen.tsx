@@ -49,7 +49,7 @@ export function FriendRecommendationsScreen({
 
   return (
     <div className="app-screen" {...swipeBack}>
-      <ScreenHeader title={username} onBack={onBack} />
+      <ScreenHeader title={`${username}'s Recommendations`} onBack={onBack} />
 
       <div className="category-screen__filter-tabs">
         <button

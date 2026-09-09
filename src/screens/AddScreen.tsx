@@ -15,7 +15,6 @@ import { useSwipeBack } from "../hooks/useSwipeBack";
 interface AddScreenProps {
   onClose: () => void;
   onAdd: (item: WatchlistItem) => void;
-  existingTags: string[];
   isAlreadyAdded: (source: MediaSource, externalId: string) => boolean;
   // Optional — only App.tsx passes this, to know when it's worth mounting
   // a lightweight backdrop of the previous screen behind an in-progress
@@ -37,7 +36,6 @@ type Step =
 export function AddScreen({
   onClose,
   onAdd,
-  existingTags,
   isAlreadyAdded,
   onSwipeActiveChange,
 }: AddScreenProps) {
@@ -100,7 +98,6 @@ export function AddScreen({
           ? draft.recommendationNote.trim()
           : null,
       personalNotes: draft.personalNotes.trim() ? draft.personalNotes.trim() : null,
-      personalTags: draft.personalTags,
       dateAdded: now,
       dateWatched: null,
     };
@@ -180,7 +177,6 @@ export function AddScreen({
         <div className="app-screen__scroll">
           <DetailsFormStep
             details={step.details}
-            existingTags={existingTags}
             onCancel={() => setStep({ kind: "search" })}
             onSubmit={handleSubmit}
           />

@@ -72,19 +72,10 @@ export function ItemCard({ item, onClick, eager }: ItemCardProps) {
           )
         )}
         <div className="item-card__footer">
-          {item.status === "watched" && item.personalRating !== null ? (
+          {item.status === "watched" && item.personalRating !== null && (
             <span className="item-card__rating" title="Your rating">
               {"★".repeat(item.personalRating)}
             </span>
-          ) : (
-            // External ratings are only shown for movies here — TV shows
-            // keep theirs to the Detail screen only (see DetailScreen.tsx),
-            // per product decision; the personal rating above is unaffected
-            // either way.
-            item.mediaType !== "tv" &&
-            item.externalRating !== null && (
-              <span className="item-card__rating">★ {item.externalRating.toFixed(1)}</span>
-            )
           )}
         </div>
       </div>

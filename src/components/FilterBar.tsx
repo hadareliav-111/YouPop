@@ -10,13 +10,12 @@ interface FilterBarProps {
   filters: Filters;
   onChange: (filters: Filters) => void;
   genres: string[];
-  tags: string[];
   recommenders: string[];
   hideMediaTypeTabs?: boolean;
   showTvSubtypeFilter?: boolean;
   // Watched only wants the plain All/Movies/TV Shows tabs — the "Filters"
-  // button (sort/status/genre/tag/recommender panel) is more than that
-  // screen needs.
+  // button (sort/status/genre/recommender panel) is more than that screen
+  // needs.
   hideMoreFilters?: boolean;
 }
 
@@ -30,7 +29,6 @@ export function FilterBar({
   filters,
   onChange,
   genres,
-  tags,
   recommenders,
   hideMediaTypeTabs,
   showTvSubtypeFilter,
@@ -135,22 +133,6 @@ export function FilterBar({
               {genres.map((g) => (
                 <option key={g} value={g}>
                   {g}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-panel__field">
-            <label htmlFor="filter-tag">Personal tag</label>
-            <select
-              id="filter-tag"
-              value={filters.tag ?? ""}
-              onChange={(e) => patch({ tag: e.target.value || null })}
-            >
-              <option value="">All tags</option>
-              {tags.map((t) => (
-                <option key={t} value={t}>
-                  {t}
                 </option>
               ))}
             </select>

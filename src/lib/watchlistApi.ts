@@ -29,7 +29,6 @@ interface WatchlistRow {
   recommended_by: string | null;
   recommendation_note: string | null;
   personal_notes: string | null;
-  personal_tags: string[];
   sort_order: number;
   date_added: string;
   date_watched: string | null;
@@ -60,7 +59,6 @@ function fromRow(row: WatchlistRow): WatchlistItem {
     recommendedBy: row.recommended_by,
     recommendationNote: row.recommendation_note,
     personalNotes: row.personal_notes,
-    personalTags: row.personal_tags,
     sortOrder: row.sort_order,
     dateAdded: row.date_added,
     dateWatched: row.date_watched,
@@ -91,7 +89,6 @@ function toRow(item: WatchlistItem, userId: string) {
     recommended_by: item.recommendedBy,
     recommendation_note: item.recommendationNote,
     personal_notes: item.personalNotes,
-    personal_tags: item.personalTags,
     sort_order: item.sortOrder,
     date_added: item.dateAdded,
     date_watched: item.dateWatched,
@@ -123,7 +120,6 @@ const PATCH_KEY_MAP: Record<keyof WatchlistItem, string> = {
   recommendedBy: "recommended_by",
   recommendationNote: "recommendation_note",
   personalNotes: "personal_notes",
-  personalTags: "personal_tags",
   sortOrder: "sort_order",
   dateAdded: "date_added",
   dateWatched: "date_watched",
