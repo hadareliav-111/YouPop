@@ -414,8 +414,6 @@ function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
             isNew={isFriendRecommendationNew}
             onBack={() => {}}
             onSelect={() => {}}
-            onAddToWatchlist={() => {}}
-            onMarkWatched={() => {}}
           />
         );
       }
@@ -635,12 +633,6 @@ function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
             isNew={isFriendRecommendationNew}
             onBack={popScreen}
             onSelect={(rec) => pushScreen({ kind: "friend-recommendation-detail", id: rec.id })}
-            onAddToWatchlist={(rec) =>
-              addFriendRecommendationToWatchlist(rec, selectedFriendGroup.username)
-            }
-            onMarkWatched={(rec) =>
-              addFriendRecommendationToWatchlist(rec, selectedFriendGroup.username, "watched")
-            }
             onSwipeActiveChange={setSwipeActive}
           />
         )}
