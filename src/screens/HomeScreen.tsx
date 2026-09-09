@@ -99,7 +99,7 @@ export function HomeScreen({
     return (
       <div className="home-screen">
         <Header title="My Watchlist" onAdd={onAdd} onOpenWatched={onOpenWatched} onOpenMenu={onOpenMenu} />
-        <div className="home-screen__empty">
+        <div className="screen-empty">
           <EmptyState
             icon="🍿"
             title="Your watchlist is empty"

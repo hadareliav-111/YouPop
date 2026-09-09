@@ -953,7 +953,13 @@ a {
   overflow: hidden;
 }
 
-.home-screen__empty {
+/* Shared empty-state wrapper — centers an EmptyState within whatever flex
+   column region (Header-to-TabBar) the current screen has, with no padding
+   of its own. Not Home-specific despite living in this section (that's
+   just where it was first written): RecommendationsScreen reuses this
+   exact class too, so both screens' empty states share one real layout
+   instead of two independently-tuned ones that merely look alike. */
+.screen-empty {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -1208,19 +1214,6 @@ a {
 
 /* ---------- Empty states ---------- */
 
-/* Centers an EmptyState within a scrolling `.app-screen__scroll` container
-   (min-height: 100% of that container, not flex: 1 1 auto — the scroll
-   container itself isn't a flex parent, unlike .home-screen__empty's own
-   flex-column context) so a screen like Recommendations reads with the
-   same overall vertically-centered composition as Home's own empty state,
-   without needing that screen's layout to match Home's structurally. */
-.screen-empty-center {
-  min-height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .empty-state {
   text-align: center;
   padding: 3.5rem 1.5rem;
@@ -1239,6 +1232,14 @@ a {
 }
 
 .empty-state__message {
+  /* Recommendations' own message ("Search for a movie or show you'd
+     recommend to others.") is long enough to wrap to a second line at
+     iPhone widths at the default 1rem, while Watchlist's shorter one
+     ("Add a movie or show you want to watch.") just barely fits on one —
+     making the two empty states different heights despite sharing the
+     same layout otherwise. Sized down uniformly (not per-screen) so both
+     stay on a single line and the two empty states stay the same height. */
+  font-size: 0.8rem;
   margin: 0 0 1.25rem;
 }
 

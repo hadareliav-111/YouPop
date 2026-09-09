@@ -55,37 +55,44 @@ export function RecommendationsScreen({
         </div>
       )}
 
-      <div className="app-screen__scroll">
-        {sorted.length === 0 ? (
-          <div className="screen-empty-center">
-            <EmptyState
-              icon="⭐"
-              title="No recommendations yet"
-              message="Search for a movie or show you'd recommend to others."
-              actionLabel="+ Add Recommendation"
-              onAction={onAdd}
-            />
-          </div>
-        ) : editOrderMode ? (
-          <>
-            <p className="text-muted reorder-hint">
-              Press and drag a poster to reorder.
-            </p>
-            <ReorderableGrid items={sorted} onReorder={onReorder} />
-          </>
-        ) : (
-          <div className="watchlist-grid">
-            {sorted.map((rec) => (
-              <RecommendationCard
-                key={rec.id}
-                recommendation={rec}
-                onClick={() => onSelect(rec)}
-                eager
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      {sorted.length === 0 ? (
+        // Same shared .screen-empty wrapper Home's own empty state uses
+        // (sits outside .app-screen__scroll, same as Home's — see that
+        // class's own comment) rather than centering independently inside
+        // the scroll container, so the two screens' empty states share one
+        // real layout instead of two separately-tuned ones.
+        <div className="screen-empty">
+          <EmptyState
+            icon="⭐"
+            title="No recommendations yet"
+            message="Search for a movie or show you'd recommend to others."
+            actionLabel="+ Add Recommendation"
+            onAction={onAdd}
+          />
+        </div>
+      ) : (
+        <div className="app-screen__scroll">
+          {editOrderMode ? (
+            <>
+              <p className="text-muted reorder-hint">
+                Press and drag a poster to reorder.
+              </p>
+              <ReorderableGrid items={sorted} onReorder={onReorder} />
+            </>
+          ) : (
+            <div className="watchlist-grid">
+              {sorted.map((rec) => (
+                <RecommendationCard
+                  key={rec.id}
+                  recommendation={rec}
+                  onClick={() => onSelect(rec)}
+                  eager
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <TabBar activeTab="recommendations" onSwitchTab={onSwitchTab} friendRequestCount={friendRequestCount} />
     </div>
