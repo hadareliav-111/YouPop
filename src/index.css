@@ -211,6 +211,23 @@ a {
 .app-screen-stack__backdrop {
   position: absolute;
   inset: 0;
+  /* Without an explicit z-index here, this box has no z-index of its own
+     (position: absolute + z-index: auto never establishes a stacking
+     context), so it contributes nothing to isolate its children's own
+     stacking — a backdrop screen's z-indexed content then gets compared
+     directly against .app-screen's z-index: 1 in whatever stacking
+     context actually contains both (neither this element nor
+     .app-screen-stack creates one). Home/Recommendations/
+     FriendsRecommendations' shared Header is `position: sticky; z-index:
+     5` (see .app-header) — 5 beats .app-screen's 1, so the instant one of
+     those screens is mounted as a backdrop (swipe gesture start, before
+     any drag distance), its header painted OVER the real foreground
+     screen's own header instead of staying hidden behind it. Explicit
+     z-index: 0 here (still below .app-screen's 1) makes this element
+     itself establish a stacking context, so everything mounted inside —
+     however high its own z-index — is contained within this box's single
+     z-index: 0 slot and can never outrank the real foreground screen. */
+  z-index: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
