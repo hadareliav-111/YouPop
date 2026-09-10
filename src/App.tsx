@@ -4,6 +4,7 @@ import { CategoryScreen } from "./screens/CategoryScreen";
 import { WatchedScreen } from "./screens/WatchedScreen";
 import { AddScreen } from "./screens/AddScreen";
 import { DetailScreen } from "./screens/DetailScreen";
+import { EpisodeProgressScreen } from "./screens/EpisodeProgressScreen";
 import { EditWatchlistItemScreen } from "./screens/EditWatchlistItemScreen";
 import { LoginScreen } from "./screens/LoginScreen";
 import { RecommendationsScreen } from "./screens/RecommendationsScreen";
@@ -38,6 +39,7 @@ type Screen =
   | { kind: "add" }
   | { kind: "detail"; itemId: string }
   | { kind: "edit-item"; itemId: string }
+  | { kind: "episode-progress"; itemId: string }
   | { kind: "recommendations" }
   | { kind: "add-recommendation" }
   | { kind: "recommendation-detail"; id: string }
@@ -226,6 +228,11 @@ function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
       ? items.find((item) => item.id === screen.itemId) ?? null
       : null;
 
+  const selectedItemForEpisodeProgress =
+    screen.kind === "episode-progress"
+      ? items.find((item) => item.id === screen.itemId) ?? null
+      : null;
+
   const selectedRecommendation =
     screen.kind === "recommendation-detail"
       ? recommendations.find((r) => r.id === screen.id) ?? null
@@ -318,8 +325,9 @@ function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
   // `add-recommendation` only from `recommendations`; `add-friend` and
   // `friend-visibility` only from `friends`; `friend-recommendations` only
   // from `friends-recommendations`; `detail` from `home`, `category`, or
-  // `watched`; `edit-item` (swipe-enabled, same as `detail`) only from
-  // `detail`; `recommendation-detail` only from `recommendations`;
+  // `watched`; `edit-item` and `episode-progress` (both swipe-enabled, same
+  // as `detail`) only from `detail`; `recommendation-detail` only from
+  // `recommendations`;
   // `friend-recommendation-detail` from `friends-recommendations` or
   // `friend-recommendations`. That's the complete set below — every other
   // screen kind can never legitimately appear as a backdrop given how
@@ -373,7 +381,7 @@ function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
             onMarkWatched={() => {}}
             onMarkWantToWatch={() => {}}
             onMarkCurrentlyWatching={() => {}}
-            onSetCurrentEpisode={() => {}}
+            onOpenEpisodeProgress={() => {}}
             onSetRating={() => {}}
             onDelete={() => {}}
             isRecommended={alreadyRecommended(backdropItem.externalSource, backdropItem.externalId)}
@@ -528,7 +536,9 @@ function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
               onMarkWatched={() => markWatched(selectedItem.id)}
               onMarkWantToWatch={() => markWantToWatch(selectedItem.id)}
               onMarkCurrentlyWatching={() => markCurrentlyWatching(selectedItem.id)}
-              onSetCurrentEpisode={(episode) => setCurrentEpisode(selectedItem.id, episode)}
+              onOpenEpisodeProgress={() =>
+                pushScreen({ kind: "episode-progress", itemId: selectedItem.id })
+              }
               onSetRating={(rating) => setPersonalRating(selectedItem.id, rating)}
               onDelete={() => {
                 deleteItem(selectedItem.id);
@@ -578,6 +588,17 @@ function WatchlistApp({ userId, onSignOut, onReady }: WatchlistAppProps) {
               updateItem(selectedItemForEdit.id, patch);
               popScreen();
             }}
+            onSwipeActiveChange={setSwipeActive}
+          />
+        )}
+
+        {screen.kind === "episode-progress" && selectedItemForEpisodeProgress && (
+          <EpisodeProgressScreen
+            item={selectedItemForEpisodeProgress}
+            onBack={popScreen}
+            onSetCurrentEpisode={(episode) =>
+              setCurrentEpisode(selectedItemForEpisodeProgress.id, episode)
+            }
             onSwipeActiveChange={setSwipeActive}
           />
         )}

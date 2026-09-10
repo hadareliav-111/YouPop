@@ -1,20 +1,13 @@
 import { useEffect, useState } from "react";
-import type { EpisodeRef, WatchlistItem } from "../types";
-import {
-  getCachedEpisodes,
-  getDetails,
-  getEpisodes,
-  isOmdbConfigured,
-  type TvmazeEpisode,
-} from "../lib/providers";
-import { getNextEpisodeStatus, episodeLabel } from "../lib/episodeProgress";
+import type { WatchlistItem } from "../types";
+import { getDetails, isOmdbConfigured } from "../lib/providers";
+import { episodeLabel } from "../lib/episodeProgress";
 import { mediaTypeLabel } from "../lib/mediaTypeLabel";
 import { getReleaseAvailability, formatComingLabel } from "../lib/availability";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { OverflowMenu } from "../components/OverflowMenu";
 import { StarRating } from "../components/StarRating";
-import { EpisodePicker } from "../components/ItemDetail/EpisodePicker";
 import { Modal } from "../components/Modal";
 import { WhereToWatch } from "../components/WhereToWatch";
 import { ShareWithFriendsPicker, type AudienceMode } from "../components/ShareWithFriendsPicker";
@@ -35,7 +28,11 @@ interface DetailScreenProps {
   onMarkWatched: () => void;
   onMarkWantToWatch: () => void;
   onMarkCurrentlyWatching: () => void;
-  onSetCurrentEpisode: (episode: EpisodeRef | null) => void;
+  // Opens the dedicated Episode Progress screen — see EpisodeProgressScreen
+  // for watched-progress/next-episode/"I've watched up to..." (moved there
+  // in full so this screen stays a single compact page, never taller
+  // because of episode data).
+  onOpenEpisodeProgress: () => void;
   onSetRating: (rating: number | null) => void;
   onDelete: () => void;
   isRecommended: boolean;
@@ -63,7 +60,7 @@ export function DetailScreen({
   onMarkWatched,
   onMarkWantToWatch,
   onMarkCurrentlyWatching,
-  onSetCurrentEpisode,
+  onOpenEpisodeProgress,
   onSetRating,
   onDelete,
   isRecommended,
@@ -72,7 +69,6 @@ export function DetailScreen({
   onSwipeActiveChange,
 }: DetailScreenProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Edge-swipe-to-go-back — see useSwipeBack's own comment for why it
   // can't collide with normal scrolling here (including the modal-touch
@@ -124,38 +120,6 @@ export function DetailScreen({
   };
   const isCurrentlyWatchingTv = item.mediaType === "tv" && item.status === "currently_watching";
 
-  // Seeded synchronously from the shared episodes cache (see
-  // useNextEpisodes.ts's own comment on getCachedEpisodes for the full
-  // rationale) — this screen fully unmounts/remounts on every Edit Save/
-  // Cancel round trip (same as any push/pop in this app), and without this,
-  // a currently-watching show's remount always started from "Loading
-  // episodes…" for a frame even though this exact item's episodes were
-  // already fetched moments ago by the previous mount of this same screen.
-  const [episodes, setEpisodes] = useState<TvmazeEpisode[]>(() =>
-    isCurrentlyWatchingTv ? getCachedEpisodes(item.externalSource, item.externalId) ?? [] : [],
-  );
-  const [episodesLoading, setEpisodesLoading] = useState(
-    () => isCurrentlyWatchingTv && !getCachedEpisodes(item.externalSource, item.externalId),
-  );
-
-  useEffect(() => {
-    if (!isCurrentlyWatchingTv) return;
-    let cancelled = false;
-    // Only flips to a visible loading state when nothing's cached yet — a
-    // cache hit here would otherwise still cost one render at
-    // episodesLoading=true (getEpisodes() resolves a microtask later even
-    // on a hit) after having just seeded true above.
-    if (!getCachedEpisodes(item.externalSource, item.externalId)) setEpisodesLoading(true);
-    getEpisodes(item.externalSource, item.externalId).then((eps) => {
-      if (cancelled) return;
-      setEpisodes(eps);
-      setEpisodesLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [isCurrentlyWatchingTv, item.externalSource, item.externalId]);
-
   // One-time backfill for TV shows saved before OMDb rating enrichment
   // existed (or saved when TVmaze had no rating yet): re-running
   // tvmaze.ts's getDetails() picks up its current IMDb/Rotten Tomatoes
@@ -186,10 +150,6 @@ export function DetailScreen({
       cancelled = true;
     };
   }, [item.id, item.mediaType, item.externalSource, item.externalId]);
-
-  const nextEpisodeStatus = isCurrentlyWatchingTv
-    ? getNextEpisodeStatus(episodes, item.currentEpisode)
-    : null;
 
   const isUpcoming =
     item.status === "want_to_watch" &&
@@ -264,16 +224,73 @@ export function DetailScreen({
             </div>
           </div>
 
-          {item.status !== "want_to_watch" && (
-            <section className="detail-section">
-              <button
-                type="button"
-                className="btn btn--secondary btn--block"
-                onClick={handleAddToRecommendationsClick}
-                disabled={isRecommended}
-              >
-                {isRecommended ? "✓ In Recommendations" : "+ Add to Recommendations"}
-              </button>
+          {item.mediaType === "movie" ? (
+            item.status !== "want_to_watch" && (
+              <section className="detail-section">
+                <button
+                  type="button"
+                  className="btn btn--secondary btn--block"
+                  onClick={handleAddToRecommendationsClick}
+                  disabled={isRecommended}
+                >
+                  {isRecommended ? "✓ In Recommendations" : "+ Add to Recommendations"}
+                </button>
+              </section>
+            )
+          ) : (
+            // TV's quick-actions area: a compact Add to Recommendations/In
+            // Recommendations button plus the Want to Watch/Watching/Watched
+            // selector (moved up from the old Status section below, which no
+            // longer exists for TV — see its own comment further down), so
+            // this doesn't push the page's real content further down the
+            // screen. Same handlers/conditions as before, just relocated and
+            // restyled compact instead of full-width.
+            <section className="detail-section item-detail__quick-actions">
+              {item.status !== "want_to_watch" && (
+                <button
+                  type="button"
+                  className="btn btn--secondary btn--compact"
+                  onClick={handleAddToRecommendationsClick}
+                  disabled={isRecommended}
+                >
+                  {isRecommended ? "✓ In Recommendations" : "+ Add to Recommendations"}
+                </button>
+              )}
+
+              <div className="segmented status-segmented status-segmented--compact">
+                <button
+                  type="button"
+                  className={`segmented__option segmented__option--want_to_watch ${item.status === "want_to_watch" ? "is-active" : ""}`}
+                  onClick={onMarkWantToWatch}
+                >
+                  Want to watch
+                </button>
+                <button
+                  type="button"
+                  className={`segmented__option segmented__option--currently_watching ${item.status === "currently_watching" ? "is-active" : ""}`}
+                  onClick={onMarkCurrentlyWatching}
+                >
+                  Watching
+                </button>
+                <button
+                  type="button"
+                  className={`segmented__option segmented__option--watched ${item.status === "watched" ? "is-active" : ""}`}
+                  onClick={onMarkWatched}
+                >
+                  Watched
+                </button>
+              </div>
+
+              {isCurrentlyWatchingTv && (
+                <div className="detail-section__header">
+                  <p className="text-muted">
+                    Episode Progress · {episodeLabel(item.currentEpisode)}
+                  </p>
+                  <button type="button" className="link-btn" onClick={onOpenEpisodeProgress}>
+                    Manage ›
+                  </button>
+                </div>
+              )}
             </section>
           )}
 
@@ -319,126 +336,36 @@ export function DetailScreen({
             )}
           </section>
 
-          <section className="detail-section">
-            <h3 className="detail-section__title">Status</h3>
-
-            {item.mediaType === "movie" ? (
-              <>
-                <p className="item-detail__status">{STATUS_LABEL[item.status]}</p>
-                {item.status === "want_to_watch" && (
-                  <button type="button" className="btn btn--primary btn--block" onClick={onMarkWatched}>
-                    Mark as watched
-                  </button>
-                )}
-                {item.status === "watched" && (
-                  <>
-                    <div className="item-detail__rating-row">
-                      <span>My rating:</span>
-                      <StarRating value={item.personalRating} onChange={onSetRating} />
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn--ghost btn--block"
-                      onClick={onMarkWantToWatch}
-                    >
-                      Mark as want to watch
-                    </button>
-                  </>
-                )}
-              </>
-            ) : (
-              <>
-                <div className="segmented status-segmented">
-                  <button
-                    type="button"
-                    className={`segmented__option ${item.status === "want_to_watch" ? "is-active" : ""}`}
-                    onClick={onMarkWantToWatch}
-                  >
-                    Want to watch
-                  </button>
-                  <button
-                    type="button"
-                    className={`segmented__option ${item.status === "currently_watching" ? "is-active" : ""}`}
-                    onClick={onMarkCurrentlyWatching}
-                  >
-                    Watching
-                  </button>
-                  <button
-                    type="button"
-                    className={`segmented__option ${item.status === "watched" ? "is-active" : ""}`}
-                    onClick={onMarkWatched}
-                  >
-                    Watched
-                  </button>
-                </div>
-
-                {item.status === "watched" && (
+          {/* TV's status controls (selector, Episode Progress) moved to the
+              compact item-detail__quick-actions section above, and TV
+              never shows a personal-rating control at all — so nothing is
+              left here for TV; this section only exists for movies now. */}
+          {item.mediaType === "movie" && (
+            <section className="detail-section">
+              <h3 className="detail-section__title">Status</h3>
+              <p className="item-detail__status">{STATUS_LABEL[item.status]}</p>
+              {item.status === "want_to_watch" && (
+                <button type="button" className="btn btn--primary btn--block" onClick={onMarkWatched}>
+                  Mark as watched
+                </button>
+              )}
+              {item.status === "watched" && (
+                <>
                   <div className="item-detail__rating-row">
                     <span>My rating:</span>
                     <StarRating value={item.personalRating} onChange={onSetRating} />
                   </div>
-                )}
-
-                {isCurrentlyWatchingTv && !pickerOpen && (
-                  <div className="episode-progress">
-                    <p className="episode-progress__current">
-                      Last watched: <strong>{episodeLabel(item.currentEpisode)}</strong>
-                    </p>
-                    {episodesLoading && <p className="text-muted">Loading episodes…</p>}
-                    {!episodesLoading && nextEpisodeStatus && (
-                      <>
-                        {nextEpisodeStatus.episode ? (
-                          <p className="episode-progress__next">
-                            Next: <strong>S{nextEpisodeStatus.episode.season} E{nextEpisodeStatus.episode.number}</strong>
-                            {" — "}
-                            <span className={`episode-progress__badge episode-progress__badge--${nextEpisodeStatus.availability}`}>
-                              {nextEpisodeStatus.label}
-                              {nextEpisodeStatus.exactDate ? ` · ${nextEpisodeStatus.exactDate}` : ""}
-                            </span>
-                          </p>
-                        ) : (
-                          <p className="text-muted">No upcoming episode.</p>
-                        )}
-                        {nextEpisodeStatus.episode && (
-                          <button
-                            type="button"
-                            className="btn btn--primary btn--block"
-                            onClick={() =>
-                              onSetCurrentEpisode({
-                                season: nextEpisodeStatus.episode!.season,
-                                number: nextEpisodeStatus.episode!.number,
-                              })
-                            }
-                          >
-                            Mark S{nextEpisodeStatus.episode.season} E{nextEpisodeStatus.episode.number} as watched
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="link-btn"
-                          onClick={() => setPickerOpen(true)}
-                        >
-                          I've watched up to...
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {isCurrentlyWatchingTv && pickerOpen && (
-                  <EpisodePicker
-                    episodes={episodes}
-                    current={item.currentEpisode}
-                    onSelect={(ep) => {
-                      onSetCurrentEpisode(ep);
-                      setPickerOpen(false);
-                    }}
-                    onCancel={() => setPickerOpen(false)}
-                  />
-                )}
-              </>
-            )}
-          </section>
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--block"
+                    onClick={onMarkWantToWatch}
+                  >
+                    Mark as want to watch
+                  </button>
+                </>
+              )}
+            </section>
+          )}
         </div>
       </div>
 

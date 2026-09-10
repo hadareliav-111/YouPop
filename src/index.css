@@ -1980,7 +1980,68 @@ a {
   margin-bottom: 0.75rem;
 }
 
+/* TV's compact quick-actions area (Add to Recommendations/In
+   Recommendations + the status selector, moved up from the old Status
+   section — see DetailScreen.tsx's own comment). align-items: flex-start
+   keeps the Add to Recommendations button at its natural compact width
+   instead of stretching full-width like .btn--block; .segmented and
+   .detail-section__header below both already carry their own
+   width: 100%, so they still span the row despite that. */
+.item-detail__quick-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.item-detail__quick-actions .status-segmented {
+  margin-bottom: 0;
+}
+
+.status-segmented--compact .segmented__option {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+/* Same subtle/translucent colors as the status tags already used on cards
+   (RecommendationCard's item-card__status-badge--rec-* — see index.css's
+   own comment there) — Want to Watch orange, Watching blue, Watched
+   green. Scoped to .status-segmented--compact and .is-active only, so the
+   shared .segmented__option.is-active style (every other segmented
+   control in the app, e.g. ShareWithFriendsPicker's mode toggle) is
+   untouched. Unselected options keep the ordinary neutral
+   .segmented__option look. */
+.status-segmented--compact .segmented__option--want_to_watch.is-active {
+  background: rgba(230, 149, 46, 0.85);
+  color: #fff;
+}
+
+.status-segmented--compact .segmented__option--currently_watching.is-active {
+  background: rgba(64, 132, 234, 0.85);
+  color: #fff;
+}
+
+.status-segmented--compact .segmented__option--watched.is-active {
+  background: rgba(34, 160, 107, 0.85);
+  color: #fff;
+}
+
 /* ---------- Episode progress & picker ---------- */
+
+/* EpisodeProgressScreen's own content wrapper — not .app-screen__scroll,
+   because when the episode picker is open its own list (.episode-picker__
+   list) needs to be the thing that grows into/scrolls the remaining
+   space, not this outer wrapper. overflow: hidden here is safe: the
+   summary view (.episode-progress) is always short/fixed height, and the
+   picker's list handles its own scrolling internally. */
+.episode-progress-screen__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 1rem 2rem;
+  overflow: hidden;
+}
 
 .episode-progress {
   margin-top: 0.85rem;
@@ -2017,6 +2078,11 @@ a {
   color: var(--color-primary);
 }
 
+/* flex: 1 1 auto + min-height: 0 lets this fill the remaining height of
+   .episode-progress-screen__body (see that class's own comment) — the
+   hint text, season select, and Cancel button below all stay their
+   natural size (default flex: 0 1 auto), so .episode-picker__list is the
+   one part that actually grows/shrinks into whatever space is left. */
 .episode-picker {
   margin-top: 0.85rem;
   padding-top: 0.85rem;
@@ -2024,6 +2090,8 @@ a {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .episode-picker__hint {
@@ -2032,11 +2100,16 @@ a {
   color: var(--color-text-muted);
 }
 
+/* Was a fixed max-height: 260px scrollbox regardless of context — now
+   grows to fill .episode-picker's own remaining space (a short season's
+   list just sits there, no separate cramped scrollbox) and only scrolls
+   within that space once a season's list is actually taller than it. */
 .episode-picker__list {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 260px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -2060,6 +2133,11 @@ a {
 
 .episode-picker__row.is-current {
   outline: 2px solid var(--color-primary);
+}
+
+.episode-picker__row:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .episode-picker__row-number {
@@ -2111,6 +2189,7 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
 }
 
 .detail-section__title {
