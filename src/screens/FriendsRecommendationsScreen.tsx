@@ -125,21 +125,21 @@ export function FriendsRecommendationsScreen({
       <div className="category-screen__filter-tabs">
         <button
           type="button"
-          className={`filter-tab ${filter === "not_watched" ? "is-active" : ""}`}
+          className={`filter-tab filter-tab--pink ${filter === "not_watched" ? "is-active" : ""}`}
           onClick={() => setFilter("not_watched")}
         >
           Not Watched
         </button>
         <button
           type="button"
-          className={`filter-tab ${filter === "all" ? "is-active" : ""}`}
+          className={`filter-tab filter-tab--pink ${filter === "all" ? "is-active" : ""}`}
           onClick={() => setFilter("all")}
         >
           All
         </button>
         <button
           type="button"
-          className="btn btn--secondary btn--compact friends-recs__manage-btn"
+          className="friends-recs__manage-btn"
           onClick={onManageFriends}
         >
           Manage Friends

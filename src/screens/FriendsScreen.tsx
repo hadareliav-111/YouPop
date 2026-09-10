@@ -56,7 +56,7 @@ export function FriendsScreen({
         title="Friends"
         onBack={onBack}
         right={
-          <button type="button" className="btn btn--primary btn--compact" onClick={onOpenAddFriend}>
+          <button type="button" className="btn btn--add btn--compact" onClick={onOpenAddFriend}>
             + Add Friend
           </button>
         }
@@ -75,17 +75,17 @@ export function FriendsScreen({
               <div className="friend-row friend-row--v2" key={friend.friendshipId}>
                 <div className="friend-row__top">
                   <span className="friend-row__name">{friend.username}</span>
-                  <div className="friend-row__actions friend-row__actions--compact">
+                  <div className="friend-row__actions friend-row__actions--compact friend-row__actions--text-links">
                     <button
                       type="button"
-                      className="btn btn--secondary btn--compact"
+                      className="link-btn"
                       onClick={() => onOpenFriendSharing(friend)}
                     >
                       Manage
                     </button>
                     <button
                       type="button"
-                      className="btn btn--danger-subtle btn--compact"
+                      className="link-btn link-btn--danger"
                       onClick={() => setRemovingFriend(friend)}
                     >
                       Remove

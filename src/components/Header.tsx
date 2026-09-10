@@ -27,7 +27,7 @@ export function Header({
           {onAdd && (
             <button
               type="button"
-              className="btn btn--primary btn--compact"
+              className="btn btn--add btn--compact"
               onClick={onAdd}
             >
               + Add

@@ -291,6 +291,24 @@ a {
   background: var(--color-primary-hover);
 }
 
+/* The pink outline treatment shared by the app's compact "add" actions
+   (My Watchlist/My Recommendations' "+ Add", Manage Friends' "+ Add
+   Friend") — deliberately reads as a clickable action, not an
+   informational pill: transparent fill, thin pink outline (an inset
+   box-shadow, same technique as .btn--outline below, so it doesn't
+   affect box size the way a real border would), pink text. Distinct on
+   purpose from the availability tags' translucent-pink-fill/white-text
+   look (.rail-tile__badge and friends) — same hue, opposite treatment.
+   Every other primary button keeps its existing solid look. */
+.btn--add {
+  background: transparent;
+  color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+.btn--add:hover:not(:disabled) {
+  background: rgba(232, 115, 158, 0.12);
+}
+
 .btn--secondary {
   background: var(--color-chip-bg);
   color: var(--color-chip-text);
@@ -608,6 +626,17 @@ a {
   color: var(--color-primary-contrast);
 }
 
+/* Opt-in per filter row (Friends' Recommendations' Not Watched/All,
+   Category's genre filters) — same translucent-pink/white-text treatment
+   as the app's other pink pills/tags, instead of the shared solid-pink/
+   dark-text .is-active above. Other .filter-tab users (e.g. Recommendations)
+   keep that original look. Inactive state is untouched either way (falls
+   through to plain .filter-tab). */
+.filter-tab--pink.is-active {
+  background: rgba(232, 115, 158, 0.85);
+  color: #fff;
+}
+
 .filter-tab--more {
   margin-left: auto;
 }
@@ -615,10 +644,20 @@ a {
 /* Kept secondary/compact and pushed to the far end of the filter row so it
    never competes visually with the Not Watched/All toggle above the actual
    recommendation rails. */
+/* A plain pink text link (no .btn classes at all, not just visually
+   overridden) — same idea as .poster-rail__see-all, sized a bit larger
+   to read as slightly more prominent than that one. */
 .friends-recs__manage-btn {
   margin-left: auto;
   flex: none;
   position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
 }
 
 /* Same badge as the tab bar's — repositioned to pop just outside this
@@ -1096,12 +1135,11 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.1rem;
-  background: var(--color-chip-bg);
+  background: none;
   color: var(--color-primary);
   border: none;
-  border-radius: 999px;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.78rem;
+  padding: 0;
+  font-size: 0.86rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -2501,6 +2539,14 @@ a {
   padding: 0.35rem 0.7rem;
   font-size: 0.82rem;
   white-space: nowrap;
+}
+
+/* Manage Friends' own Manage/Remove pair only — plain text links (no
+   padding/border to create visual separation on their own) sit too close
+   together at the shared .friend-row__actions--compact gap, so this row
+   gets a wider one. */
+.friend-row__actions--text-links {
+  gap: 1rem;
 }
 
 /* Friends list row only: the recommendation count must always be fully

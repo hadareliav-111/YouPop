@@ -136,7 +136,7 @@ export function CategoryScreen({
         <div className="category-screen__filter-tabs">
           <button
             type="button"
-            className={`filter-tab ${!filters.genre ? "is-active" : ""}`}
+            className={`filter-tab filter-tab--pink ${!filters.genre ? "is-active" : ""}`}
             onClick={() => setFilters((f) => ({ ...f, genre: null }))}
           >
             All
@@ -145,7 +145,7 @@ export function CategoryScreen({
             <button
               key={genre}
               type="button"
-              className={`filter-tab ${filters.genre === genre ? "is-active" : ""}`}
+              className={`filter-tab filter-tab--pink ${filters.genre === genre ? "is-active" : ""}`}
               onClick={() => setFilters((f) => ({ ...f, genre }))}
             >
               {genre}
