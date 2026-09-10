@@ -49,14 +49,14 @@ export function getNextEpisodeStatus(
   const episode = findNextEpisode(episodes, current);
 
   if (!episode || !episode.airdate) {
-    return { episode, availability: "none", label: "No upcoming episode", exactDate: null, sortKey: Infinity };
+    return { episode, availability: "none", label: "No Upcoming Episode", exactDate: null, sortKey: Infinity };
   }
 
   const days = daysUntil(episode.airdate);
   if (days <= 0) {
-    return { episode, availability: "available", label: "Available now", exactDate: null, sortKey: days };
+    return { episode, availability: "available", label: "Available Now", exactDate: null, sortKey: days };
   }
-  const label = days === 1 ? "Tomorrow" : `In ${days} days`;
+  const label = days === 1 ? "Tomorrow" : `In ${days} Days`;
   return {
     episode,
     availability: "upcoming",

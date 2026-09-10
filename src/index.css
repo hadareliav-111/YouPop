@@ -858,13 +858,15 @@ a {
 
 /* Same corner slot as the plain "★ Rec" star (the two never appear
    together — this replaces it once a name is actually known). Same pill
-   shape/size/padding as .item-card__status-badge (see above) so the two
-   read as one family of tags, just a translucent pink instead of that
-   badge's neutral dark/status colors — capped so a long name still
-   truncates instead of spilling over the poster. Deliberately not
-   text-transform: uppercase like the status badges: those are fixed
-   labels, but this one carries a friend's actual name ("From Maya"),
-   which reads better in its normal title-case than shouted in caps. */
+   shape/border-radius as .item-card__status-badge (see above), just a
+   translucent pink instead of that badge's neutral dark/status colors —
+   capped so a long name still truncates instead of spilling over the
+   poster. Deliberately not text-transform: uppercase like the status
+   badges: those are fixed labels, but this one carries a friend's actual
+   name ("From Maya"), which reads better in its normal title-case than
+   shouted in caps. Sized a hair larger than the status badge's own
+   0.5rem/0.18rem-0.4rem — at the exact same size, losing that uppercase
+   treatment made this one read as smaller even though the numbers matched. */
 .item-card__recommender-badge {
   position: absolute;
   top: 0.35rem;
@@ -872,9 +874,9 @@ a {
   max-width: calc(100% - 0.7rem);
   background: rgba(232, 115, 158, 0.85);
   color: #fff;
-  font-size: 0.5rem;
+  font-size: 0.55rem;
   font-weight: 700;
-  padding: 0.18rem 0.4rem;
+  padding: 0.2rem 0.45rem;
   border-radius: 999px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1199,12 +1201,16 @@ a {
   overflow: hidden;
 }
 
+/* Also doubles as Friends' Recommendations' "NEW" badge (same markup/
+   class, different rail) — one shared translucent-pink pill design for
+   every RailTile badge: "Available now", "Tomorrow"/"In X days",
+   "Coming [date]", "No upcoming episode", and "NEW" alike. */
 .rail-tile__badge {
   position: absolute;
   top: 0.3rem;
   right: 0.3rem;
   max-width: calc(100% - 0.6rem);
-  background: var(--color-primary);
+  background: rgba(232, 115, 158, 0.85);
   color: #fff;
   font-size: 0.55rem;
   font-weight: 700;
