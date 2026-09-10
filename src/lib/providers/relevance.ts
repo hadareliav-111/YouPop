@@ -67,6 +67,13 @@ export const RELEVANCE_TIERS = {
   WORD_MATCH: 62,
   SMALL_TYPO: 40,
   WEAK: 18,
+  // A real (non-empty) query written entirely in a script normalizeForMatch
+  // can't represent (Hebrew, Arabic, Cyrillic, CJK, ...) normalizes to "" —
+  // see titleRelevance below for why that's judged as "we can't score
+  // this", not "no match". Sits just above NONE: still the lowest tier, but
+  // enough to survive the "> NONE" filters callers use to drop irrelevant
+  // results.
+  UNSCORABLE: 10,
   NONE: 0,
 } as const;
 
@@ -92,7 +99,26 @@ function stripLeadingArticle(value: string): string | null {
 export function titleRelevance(title: string, rawQuery: string): number {
   const t = normalizeForMatch(title);
   const q = normalizeForMatch(rawQuery);
-  if (!q) return RELEVANCE_TIERS.NONE;
+  if (!q) {
+    // A genuinely empty/whitespace-only query has nothing to match at all
+    // (every caller already guards against ever reaching here with one in
+    // practice — e.g. tvmaze.ts's own `if (!query.trim()) return [];`).
+    // But a real query that normalizes to "" is a *non-Latin-script* query
+    // (Hebrew, Arabic, Cyrillic, CJK, ...): normalizeForMatch's [a-z0-9]
+    // filter strips it entirely, leaving nothing to text-compare against
+    // an English/Latin title with. Providers like TVmaze already resolve
+    // these server-side against data (aliases/native titles) we never see
+    // in the response — e.g. TVmaze's own alias index correctly matches
+    // the Hebrew query "להיות איתה" to "The Baker and the Beauty", a show
+    // whose title shares not one character with the query, so no amount
+    // of client-side text comparison could ever confirm that match
+    // ourselves. Treating "we can't score this" as "definitely not a
+    // match" silently discarded that already-correct result. Trusting
+    // whatever the provider itself decided to return instead — rather
+    // than fetching each candidate's aliases just to re-verify it
+    // ourselves — is what keeps this a same-request-count fix.
+    return rawQuery.trim() ? RELEVANCE_TIERS.UNSCORABLE : RELEVANCE_TIERS.NONE;
+  }
   if (t === q) return RELEVANCE_TIERS.EXACT;
   if (stripLeadingArticle(t) === q) return RELEVANCE_TIERS.EXACT_AFTER_ARTICLE;
 
