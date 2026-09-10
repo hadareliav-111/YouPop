@@ -653,66 +653,64 @@ a {
 
 /* ---------- Manual reorder mode ---------- */
 
-.reorder-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.6rem;
-}
-
-.reorder-tile {
-  /* Grid items default to `min-width: auto`, which for a `white-space:
-     nowrap` descendant (the title below) resolves to that text's full
-     unwrapped width — regardless of its own overflow/ellipsis — and that
-     min-content width can force this tile's whole 1fr column wider than its
-     fair share, shrinking every other column in the row to fit. A single
-     long title was enough to make one poster balloon and the rest shrink.
-     min-width: 0 opts this tile out of that intrinsic-size contribution, so
-     all columns stay equal regardless of title length. */
-  min-width: 0;
-  touch-action: none;
-  -webkit-user-drag: none;
-  cursor: grab;
+/* Edit Order's shared compact, poster-free vertical list (My
+   Recommendations and Watchlist's Movies/TV categories both use it via
+   ReorderableList) — a long list stays scannable and scrollable a
+   screenful at a time. Only .reorder-row__handle below carries the
+   sortable listeners and touch-action: none, so a press anywhere else on
+   the row is ordinary page scroll, not a drag start. */
+.reorder-list {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  user-select: none;
-  z-index: 1;
+  gap: 0.4rem;
 }
 
-.reorder-tile:active {
-  cursor: grabbing;
+.reorder-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-chip-bg);
+  border-radius: var(--radius-sm);
+  min-width: 0;
 }
 
-.reorder-tile.is-dragging {
+.reorder-row.is-dragging {
   z-index: 10;
   opacity: 0.9;
-}
-
-.reorder-tile.is-dragging .reorder-tile__poster {
-  box-shadow: 0 12px 28px rgba(10, 8, 20, 0.4);
-  outline: 3px solid var(--color-primary);
-  transform: scale(1.05);
-}
-
-.reorder-tile__poster {
-  width: 100%;
-  aspect-ratio: 2 / 3;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-  background: var(--color-chip-bg);
   box-shadow: var(--shadow-card);
+  outline: 2px solid var(--color-primary);
 }
 
-.reorder-tile__poster--placeholder {
+.reorder-row__handle {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.6rem;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-muted);
+  touch-action: none;
+  cursor: grab;
 }
 
-.reorder-tile__title {
+.reorder-row__handle:active {
+  cursor: grabbing;
+}
+
+.reorder-row__handle svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.reorder-row__title {
   margin: 0;
-  font-size: 0.7rem;
+  min-width: 0;
+  font-size: 0.95rem;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1637,6 +1635,48 @@ a {
   padding-right: 0.15rem;
 }
 
+/* FriendVisibilityScreen's own full-screen checklist (unlike the picker
+   above, it's the entire screen's content, not one field in a longer
+   form) — the wrapper below is allowed to grow to fill whatever vertical
+   space the fixed header/actions row above it leaves, but the grid itself
+   keeps flex-grow: 0 so it only ever takes its own natural content
+   height inside that space: a short list sits at its natural height with
+   normal row spacing (any leftover space is just blank space below it,
+   not distributed into the rows — flex-grow: 1 here would hand the grid
+   the wrapper's full height, and since a grid's own `align-content`
+   default computes to `stretch`, its auto-sized rows would then be
+   stretched apart to fill it). flex-shrink stays enabled with
+   min-height: 0 so a list taller than the available space is instead
+   capped at it and scrolls internally via the existing overflow-y: auto
+   above, rather than overflowing the fixed phone viewport. */
+.friend-visibility__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 1rem 2rem;
+  overflow: hidden;
+}
+
+.audience-picker__friends--fill {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.audience-picker__friend-grid--fill {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: none;
+  align-content: start;
+}
+
+/* Slightly tighter than the shared 0.3rem row padding above — only for
+   this screen's own full checklist, not ShareWithFriendsPicker's inline
+   field use of the same row markup. */
+.audience-picker__friend-grid--fill .audience-picker__friend-row {
+  padding: 0.35rem 0;
+}
+
 /* Still a real checkbox (native semantics/state via :checked), but drawn
    with appearance: none rather than accent-color — accent-color only
    lets a native checkbox's fill and its browser-drawn checkmark share
@@ -2423,13 +2463,18 @@ a {
 
 /* A friend with no recommendations yet gets only its header's natural
    height, not the full rail height above — no boxed placeholder, no
-   reserved poster-row space. */
+   reserved poster-row space. Extra top padding compensates for that lost
+   height: a full poster rail carries enough visual weight on its own for
+   the shared 1rem separator gap (see .friend-rec-rail + .friend-rec-rail
+   above) to read fine, but an empty section is just a title + one line of
+   text, so that same gap read as almost no gap at all above it. */
 .friend-rec-rail--empty {
   height: auto;
+  padding-top: 0.5rem;
 }
 
 .friend-rec-rail__empty-text {
   margin: 0;
-  padding: 0 0 0.2rem;
+  padding: 0 0 0.5rem;
   font-size: 0.82rem;
 }

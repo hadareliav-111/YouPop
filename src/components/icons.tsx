@@ -48,3 +48,14 @@ export function PeopleIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// Drag-handle grip for ReorderableList's per-row reorder control — same
+// line style as the tab icons above, just a plain three-bar grip rather
+// than a pictogram.
+export function GripIcon({ className }: IconProps) {
+  return (
+    <svg className={className} {...iconProps}>
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  );
+}

@@ -47,40 +47,40 @@ export function FriendVisibilityScreen({
     <div className="app-screen" {...swipeBack}>
       <ScreenHeader title={`Shared with ${username}`} onBack={onBack} />
 
-      <div className="app-screen__scroll">
-        {sorted.length === 0 ? (
+      {sorted.length === 0 ? (
+        <div className="app-screen__scroll">
           <EmptyState icon="⭐" title="No recommendations yet" message="Add a recommendation to share it with friends." />
-        ) : (
-          <>
-            <p className="text-muted">
-              {visibleCount} of {sorted.length} shared
-            </p>
-            <div className="audience-picker__friends">
-              <div className="audience-picker__actions">
-                <button type="button" className="link-btn" onClick={onSelectAll}>
-                  Select All
-                </button>
-                <button type="button" className="link-btn" onClick={onClearAll}>
-                  Clear All
-                </button>
-              </div>
-              <div className="audience-picker__friend-grid">
-                {sorted.map((rec) => (
-                  <label className="audience-picker__friend-row" key={rec.id}>
-                    <input
-                      type="checkbox"
-                      className="audience-picker__friend-checkbox"
-                      checked={isVisible(rec.id)}
-                      onChange={(e) => onToggle(rec.id, e.target.checked)}
-                    />
-                    <span className="audience-picker__friend-name">{rec.title}</span>
-                  </label>
-                ))}
-              </div>
+        </div>
+      ) : (
+        <div className="friend-visibility__body">
+          <p className="text-muted">
+            {visibleCount} of {sorted.length} shared
+          </p>
+          <div className="audience-picker__friends audience-picker__friends--fill">
+            <div className="audience-picker__actions">
+              <button type="button" className="link-btn" onClick={onSelectAll}>
+                Select All
+              </button>
+              <button type="button" className="link-btn" onClick={onClearAll}>
+                Clear All
+              </button>
             </div>
-          </>
-        )}
-      </div>
+            <div className="audience-picker__friend-grid audience-picker__friend-grid--fill">
+              {sorted.map((rec) => (
+                <label className="audience-picker__friend-row" key={rec.id}>
+                  <input
+                    type="checkbox"
+                    className="audience-picker__friend-checkbox"
+                    checked={isVisible(rec.id)}
+                    onChange={(e) => onToggle(rec.id, e.target.checked)}
+                  />
+                  <span className="audience-picker__friend-name">{rec.title}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

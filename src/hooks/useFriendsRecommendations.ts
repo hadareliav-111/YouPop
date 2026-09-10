@@ -90,7 +90,14 @@ export function useFriendsRecommendations(userId: string | null, friends: Friend
           .slice()
           .sort((a, b) => a.sortOrder - b.sortOrder),
       }))
-      .sort((a, b) => a.username.localeCompare(b.username));
+      .sort((a, b) => {
+        // Friends with at least one recommendation sort before friends with
+        // none; alphabetical by username within each of those two groups.
+        const aHasRecs = a.recommendations.length > 0;
+        const bHasRecs = b.recommendations.length > 0;
+        if (aHasRecs !== bHasRecs) return aHasRecs ? -1 : 1;
+        return a.username.localeCompare(b.username);
+      });
   }, [recommendations, friends]);
 
   const isNew = useCallback((recommendationId: string) => !seenIds.has(recommendationId), [seenIds]);

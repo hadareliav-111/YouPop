@@ -3,7 +3,7 @@ import type { MediaType, WatchlistItem } from "../types";
 import { DEFAULT_FILTERS, type Filters } from "../types/filters";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { WatchlistGrid } from "../components/WatchlistGrid";
-import { ReorderableGrid } from "../components/ReorderableGrid";
+import { ReorderableList } from "../components/ReorderableList";
 import { useSwipeBack } from "../hooks/useSwipeBack";
 
 const CATEGORY_TITLE: Record<MediaType, string> = {
@@ -56,7 +56,7 @@ export function CategoryScreen({
 
   // Edge-swipe-to-go-back — only this screen and FriendRecommendationsScreen
   // get it (see useSwipeBack's own comment for why it can't collide with
-  // ReorderableGrid's drag-to-reorder below or normal scrolling).
+  // ReorderableList's drag-to-reorder below or normal scrolling).
   const swipeBack = useSwipeBack(onBack, onSwipeActiveChange);
 
   const categoryItems = useMemo(
@@ -117,7 +117,9 @@ export function CategoryScreen({
     <div className="app-screen" {...swipeBack}>
       <ScreenHeader
         title={CATEGORY_TITLE[mediaType]}
-        onBack={onBack}
+        // No Back in Edit Order — reordering saves immediately, so Done is
+        // the only exit, same as Recommendations' own Edit Order.
+        onBack={editOrderMode ? undefined : onBack}
         right={
           manualOrderItems.length > 1 ? (
             <button
@@ -155,9 +157,9 @@ export function CategoryScreen({
         {editOrderMode ? (
           <>
             <p className="text-muted reorder-hint">
-              Press and drag a poster to reorder. First = what you want to watch most.
+              Drag the handle to reorder. First = what you want to watch most.
             </p>
-            <ReorderableGrid
+            <ReorderableList
               items={manualOrderItems}
               onReorder={(orderedIds) => onReorder(mediaType, orderedIds)}
             />

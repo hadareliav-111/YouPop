@@ -150,7 +150,7 @@ export interface Friendship {
   respondedAt: string | null; // ISO timestamp, set on accept
 }
 
-// The minimal shape a poster tile actually needs — both ReorderableGrid
+// The minimal shape a poster tile actually needs — both ReorderableList
 // (drag-reorder) and PosterRail/RailTile (horizontal rails) only ever read
 // these three fields, so both WatchlistItem and Recommendation satisfy it
 // structurally with no extra mapping.

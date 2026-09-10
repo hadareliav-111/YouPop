@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { Recommendation } from "../types";
 import { Header } from "../components/Header";
 import { RecommendationCard } from "../components/RecommendationCard";
-import { ReorderableGrid } from "../components/ReorderableGrid";
+import { ReorderableList } from "../components/ReorderableList";
 import { EmptyState } from "../components/EmptyState";
 import { TabBar } from "../components/TabBar";
 
@@ -75,9 +75,9 @@ export function RecommendationsScreen({
           {editOrderMode ? (
             <>
               <p className="text-muted reorder-hint">
-                Press and drag a poster to reorder.
+                Drag the handle to reorder.
               </p>
-              <ReorderableGrid items={sorted} onReorder={onReorder} />
+              <ReorderableList items={sorted} onReorder={onReorder} />
             </>
           ) : (
             <div className="watchlist-grid">
