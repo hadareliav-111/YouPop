@@ -14,12 +14,6 @@ import { ShareWithFriendsPicker, type AudienceMode } from "../components/ShareWi
 import type { FriendEntry } from "../hooks/useFriends";
 import { useSwipeBack } from "../hooks/useSwipeBack";
 
-const STATUS_LABEL: Record<WatchlistItem["status"], string> = {
-  want_to_watch: "Want to watch",
-  currently_watching: "Currently watching",
-  watched: "Watched",
-};
-
 interface DetailScreenProps {
   item: WatchlistItem;
   onBack: () => void;
@@ -225,18 +219,42 @@ export function DetailScreen({
           </div>
 
           {item.mediaType === "movie" ? (
-            item.status !== "want_to_watch" && (
-              <section className="detail-section">
+            // Same compact quick-actions structure/position as TV's (see
+            // the TV branch below) — one section holding the compact Add
+            // to Recommendations/In Recommendations button plus the status
+            // selector, same handlers/conditions as before. Movies only
+            // ever have two relevant statuses, so just those two options,
+            // reusing the same orange/green --want_to_watch/--watched
+            // color modifiers TV already defined.
+            <section className="detail-section item-detail__quick-actions">
+              {item.status !== "want_to_watch" && (
                 <button
                   type="button"
-                  className="btn btn--secondary btn--block"
+                  className="btn btn--secondary btn--compact"
                   onClick={handleAddToRecommendationsClick}
                   disabled={isRecommended}
                 >
                   {isRecommended ? "✓ In Recommendations" : "+ Add to Recommendations"}
                 </button>
-              </section>
-            )
+              )}
+
+              <div className="segmented status-segmented status-segmented--compact">
+                <button
+                  type="button"
+                  className={`segmented__option segmented__option--want_to_watch ${item.status === "want_to_watch" ? "is-active" : ""}`}
+                  onClick={onMarkWantToWatch}
+                >
+                  Want to watch
+                </button>
+                <button
+                  type="button"
+                  className={`segmented__option segmented__option--watched ${item.status === "watched" ? "is-active" : ""}`}
+                  onClick={onMarkWatched}
+                >
+                  Watched
+                </button>
+              </div>
+            </section>
           ) : (
             // TV's quick-actions area: a compact Add to Recommendations/In
             // Recommendations button plus the Want to Watch/Watching/Watched
@@ -284,7 +302,10 @@ export function DetailScreen({
               {isCurrentlyWatchingTv && (
                 <div className="detail-section__header">
                   <p className="text-muted">
-                    Episode Progress · {episodeLabel(item.currentEpisode)}
+                    Episode Progress ·{" "}
+                    {item.currentEpisode
+                      ? `Last Watched: ${episodeLabel(item.currentEpisode)}`
+                      : "Not Started"}
                   </p>
                   <button type="button" className="link-btn" onClick={onOpenEpisodeProgress}>
                     Manage ›
@@ -336,34 +357,19 @@ export function DetailScreen({
             )}
           </section>
 
-          {/* TV's status controls (selector, Episode Progress) moved to the
-              compact item-detail__quick-actions section above, and TV
-              never shows a personal-rating control at all — so nothing is
-              left here for TV; this section only exists for movies now. */}
-          {item.mediaType === "movie" && (
+          {/* Both mediaTypes' status *switching* now lives in the compact
+              segmented selector above (unchanged handlers, just restyled/
+              relocated) — the "Mark as watched"/"Mark as want to watch"
+              buttons and plain status label that used to live here are
+              gone as redundant. Movies' personal rating is untouched and
+              still lives here, unaffected by that; TV never had one. */}
+          {item.mediaType === "movie" && item.status === "watched" && (
             <section className="detail-section">
               <h3 className="detail-section__title">Status</h3>
-              <p className="item-detail__status">{STATUS_LABEL[item.status]}</p>
-              {item.status === "want_to_watch" && (
-                <button type="button" className="btn btn--primary btn--block" onClick={onMarkWatched}>
-                  Mark as watched
-                </button>
-              )}
-              {item.status === "watched" && (
-                <>
-                  <div className="item-detail__rating-row">
-                    <span>My rating:</span>
-                    <StarRating value={item.personalRating} onChange={onSetRating} />
-                  </div>
-                  <button
-                    type="button"
-                    className="btn btn--ghost btn--block"
-                    onClick={onMarkWantToWatch}
-                  >
-                    Mark as want to watch
-                  </button>
-                </>
-              )}
+              <div className="item-detail__rating-row">
+                <span>My rating:</span>
+                <StarRating value={item.personalRating} onChange={onSetRating} />
+              </div>
             </section>
           )}
         </div>

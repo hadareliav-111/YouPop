@@ -141,7 +141,18 @@ export function RecommendationDetailScreen({
           {(onAddToWatchlist || onMarkWatched) && (
             <section className="detail-section">
               {watchlistStatus ? (
-                <button type="button" className="btn btn--secondary btn--block" disabled>
+                // A compact status readout (like TV/Movie's status
+                // selector), not a disabled action — full-strength orange/
+                // green, not the usual dimmed :disabled look.
+                <button
+                  type="button"
+                  className={`btn btn--status-compact recommendation-detail__watchlist-status ${
+                    watchlistStatus === "watched"
+                      ? "recommendation-detail__watchlist-status--watched"
+                      : "recommendation-detail__watchlist-status--in-watchlist"
+                  }`}
+                  disabled
+                >
                   {watchlistStatus === "watched" ? "✓ Watched" : "✓ In Watchlist"}
                 </button>
               ) : (
@@ -149,7 +160,7 @@ export function RecommendationDetailScreen({
                   {onAddToWatchlist && (
                     <button
                       type="button"
-                      className="btn btn--secondary btn--block"
+                      className="btn btn--secondary btn--status-compact"
                       onClick={onAddToWatchlist}
                     >
                       + Add to Watchlist
@@ -158,7 +169,7 @@ export function RecommendationDetailScreen({
                   {onMarkWatched && (
                     <button
                       type="button"
-                      className="btn btn--secondary btn--block"
+                      className="btn btn--secondary btn--status-compact"
                       onClick={onMarkWatched}
                     >
                       Watched

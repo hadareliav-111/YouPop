@@ -70,19 +70,35 @@ export function HomeScreen({
 
   const episodeStatuses = useNextEpisodes(currentlyWatchingUnsorted);
 
+  // On a cold load, episodeStatuses fills in one item at a time as each
+  // item's own TVmaze request resolves (see useNextEpisodes) — re-sorting
+  // on every single one of those would visibly shuffle the rail into place
+  // over several steps. Waiting for every currently-watching item to have
+  // resolved at least once before sorting at all means the rail shows one
+  // stable (unsorted) order throughout that loading window, then jumps
+  // straight to the final correct order exactly once. On a warm cache,
+  // useNextEpisodes already seeds every status synchronously on first
+  // render, so this is true immediately and the correct order still shows
+  // with no delay — unchanged from before.
+  const allEpisodeStatusesResolved = currentlyWatchingUnsorted.every(
+    (item) => episodeStatuses[item.id] !== undefined,
+  );
+
   // Available now, then soonest upcoming, then "no upcoming episode" last —
   // this is the one rail where an automatic priority order (not manual
   // drag order) makes sense, since "what's actually ready to watch" is the
   // whole point of Currently Watching.
-  const currentlyWatching = useMemo(
-    () =>
-      [...currentlyWatchingUnsorted].sort((a, b) => {
-        const sa = episodeStatuses[a.id]?.sortKey ?? Infinity;
-        const sb = episodeStatuses[b.id]?.sortKey ?? Infinity;
-        return sa - sb;
-      }),
-    [currentlyWatchingUnsorted, episodeStatuses],
-  );
+  const currentlyWatching = useMemo(() => {
+    if (!allEpisodeStatusesResolved) return currentlyWatchingUnsorted;
+    return [...currentlyWatchingUnsorted].sort((a, b) => {
+      const sa = episodeStatuses[a.id]?.sortKey ?? Infinity;
+      const sb = episodeStatuses[b.id]?.sortKey ?? Infinity;
+      // sa === sb (including both still Infinity) must resolve to a
+      // well-defined tie — Infinity - Infinity is NaN, which is not a
+      // valid comparator result and leaves ties in engine-dependent order.
+      return sa === sb ? 0 : sa - sb;
+    });
+  }, [currentlyWatchingUnsorted, episodeStatuses, allEpisodeStatusesResolved]);
 
   const currentlyWatchingBadges = useMemo(() => {
     const map: Record<string, string> = {};

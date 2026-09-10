@@ -1971,11 +1971,6 @@ a {
   color: var(--color-text-muted);
 }
 
-.item-detail__status {
-  font-weight: 600;
-  margin: 0 0 0.6rem;
-}
-
 .status-segmented {
   margin-bottom: 0.75rem;
 }
@@ -2182,7 +2177,37 @@ a {
 .recommendation-detail__watchlist-actions {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 0.5rem;
+}
+
+/* Compact pill sizing matching the status selector's own compact scale
+   (see .status-segmented--compact .segmented__option) — used on
+   Recommendation Detail's Watchlist status/action row so it reads as part
+   of the same compact-status visual system without being a segmented
+   control itself (this is a status readout plus up to two independent
+   actions, never a connected group of mutually exclusive options). */
+.btn--status-compact {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+/* A compact status readout ("✓ In Watchlist"/"✓ Watched"), not an
+   unavailable action — full-strength color, not the usual dimmed
+   :disabled look every other disabled .btn gets. */
+.recommendation-detail__watchlist-status:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.recommendation-detail__watchlist-status--in-watchlist {
+  background: rgba(230, 149, 46, 0.85);
+  color: #fff;
+}
+
+.recommendation-detail__watchlist-status--watched {
+  background: rgba(34, 160, 107, 0.85);
+  color: #fff;
 }
 
 .detail-section__header {
