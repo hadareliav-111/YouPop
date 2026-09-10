@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { useSwipeToDismiss } from "../hooks/useSwipeToDismiss";
 
 interface ModalProps {
   title: string;
@@ -8,6 +9,11 @@ interface ModalProps {
 }
 
 export function Modal({ title, onClose, children, wide }: ModalProps) {
+  // Drag-down-to-dismiss from the handle/header, like a native iPhone
+  // sheet — see useSwipeToDismiss's own comment for why it's scoped to
+  // that chrome rather than the whole sheet.
+  const swipeToDismiss = useSwipeToDismiss(onClose);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -28,6 +34,7 @@ export function Modal({ title, onClose, children, wide }: ModalProps) {
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
+        {...swipeToDismiss}
       >
         <div className="modal__handle" aria-hidden="true">
           <div className="modal__handle-bar" />

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { WatchlistItem } from "../types";
 import type { FriendRecommendation } from "../lib/friendsRecommendationsApi";
-import { isNotWatched } from "../lib/watchStatus";
+import { getWatchlistStatus, isNotWatched } from "../lib/watchStatus";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { RecommendationCard } from "../components/RecommendationCard";
 import { EmptyState } from "../components/EmptyState";
@@ -81,6 +81,7 @@ export function FriendRecommendationsScreen({
                 onClick={() => onSelect(rec)}
                 showGenres
                 eager
+                watchlistStatus={getWatchlistStatus(rec, watchlistItems)}
               />
             ))}
           </div>

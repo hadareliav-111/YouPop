@@ -7,8 +7,8 @@ import { ReorderableList } from "../components/ReorderableList";
 import { useSwipeBack } from "../hooks/useSwipeBack";
 
 const CATEGORY_TITLE: Record<MediaType, string> = {
-  movie: "Movies",
-  tv: "TV Shows",
+  movie: "My Watchlist · Movies",
+  tv: "My Watchlist · TV Shows",
 };
 
 function sortItems(items: WatchlistItem[], sort: Filters["sort"]): WatchlistItem[] {

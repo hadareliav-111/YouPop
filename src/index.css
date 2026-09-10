@@ -818,6 +818,22 @@ a {
   background: rgba(232, 115, 158, 0.85);
 }
 
+/* RecommendationCard's own "viewer's Watchlist status" tag on Friends'
+   Recommendations cards — separate modifiers from --watched/
+   --currently_watching above (ItemCard's own Watchlist status badges) so
+   these colors are scoped to that one tag only. */
+.item-card__status-badge--rec-want_to_watch {
+  background: rgba(230, 149, 46, 0.85);
+}
+
+.item-card__status-badge--rec-currently_watching {
+  background: rgba(64, 132, 234, 0.85);
+}
+
+.item-card__status-badge--rec-watched {
+  background: rgba(34, 160, 107, 0.85);
+}
+
 .item-card__rec-badge {
   position: absolute;
   top: 0.35rem;
@@ -830,25 +846,49 @@ a {
   border-radius: 999px;
 }
 
+/* Want to Watch items (Movies/TV Shows' "See all") drop the redundant
+   status badge and hand this badge its bottom-left slot instead — same
+   text/color/shape either way, position only. */
+.item-card__rec-badge--status-slot {
+  top: auto;
+  right: auto;
+  left: 0.35rem;
+  bottom: 0.35rem;
+}
+
 /* Same corner slot as the plain "★ Rec" star (the two never appear
-   together — this replaces it once a name is actually known), sized a
-   little more generously since it carries a name instead of one word, and
-   capped so a long name truncates instead of spilling over the poster. */
+   together — this replaces it once a name is actually known). Same pill
+   shape/size/padding as .item-card__status-badge (see above) so the two
+   read as one family of tags, just a translucent pink instead of that
+   badge's neutral dark/status colors — capped so a long name still
+   truncates instead of spilling over the poster. Deliberately not
+   text-transform: uppercase like the status badges: those are fixed
+   labels, but this one carries a friend's actual name ("From Maya"),
+   which reads better in its normal title-case than shouted in caps. */
 .item-card__recommender-badge {
   position: absolute;
   top: 0.35rem;
   right: 0.35rem;
   max-width: calc(100% - 0.7rem);
-  background: var(--color-primary);
-  color: var(--color-primary-contrast);
-  font-size: 0.58rem;
+  background: rgba(232, 115, 158, 0.85);
+  color: #fff;
+  font-size: 0.5rem;
   font-weight: 700;
-  padding: 0.22rem 0.5rem;
+  padding: 0.18rem 0.4rem;
   border-radius: 999px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+/* Same reasoning as .item-card__rec-badge--status-slot above — Want to
+   Watch items move this into the status badge's own bottom-left slot
+   instead of its usual top-right corner, text/color/shape unchanged. */
+.item-card__recommender-badge--status-slot {
+  top: auto;
+  right: auto;
+  left: 0.35rem;
+  bottom: 0.35rem;
 }
 
 /* Same slot/treatment as .item-card__recommender-badge — never shown on

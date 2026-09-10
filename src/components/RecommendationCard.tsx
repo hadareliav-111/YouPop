@@ -1,5 +1,15 @@
-import type { Recommendation } from "../types";
+import type { Recommendation, WatchStatus } from "../types";
 import { mediaTypeLabel } from "../lib/mediaTypeLabel";
+
+// Friends' Recommendations-only wording for the viewer's own Watchlist
+// status — deliberately not ItemCard's own STATUS_LABEL map ("Want to
+// watch"), since "In Watchlist" reads better for a tag on someone else's
+// recommendation than a restatement of the status name itself.
+const WATCHLIST_STATUS_LABEL: Record<WatchStatus, string> = {
+  want_to_watch: "In Watchlist",
+  currently_watching: "Watching",
+  watched: "Watched",
+};
 
 interface RecommendationCardProps {
   recommendation: Recommendation;
@@ -7,6 +17,17 @@ interface RecommendationCardProps {
   // Used only by Friends' Recommendations — the user's own Recommendations
   // list never passes this.
   isNew?: boolean;
+  // Also Friends' Recommendations-only — the viewer's own Watchlist status
+  // for this title (null if it isn't in their Watchlist at all), reusing
+  // the same match logic Recommendation Detail already uses for its own
+  // "✓ Watched"/"✓ In Watchlist" indicator (see lib/watchStatus.ts).
+  // Renders no tag at all when omitted/null, so every other usage of this
+  // card is visually unaffected. Rendered with its own
+  // item-card__status-badge--rec-* color modifiers (see index.css) rather
+  // than reusing ItemCard's --watched/--currently_watching ones, so tuning
+  // this tag's colors can never also recolor ItemCard's own Watchlist
+  // status badges.
+  watchlistStatus?: WatchStatus | null;
   // Also Friends' Recommendations-only (FriendRecommendationsScreen's "See
   // all" grid) — shows a Genres line at the bottom, same style as
   // Watchlist cards. The user's own Recommendations list omits this and
@@ -32,6 +53,7 @@ export function RecommendationCard({
   isNew,
   showGenres,
   eager,
+  watchlistStatus,
 }: RecommendationCardProps) {
   return (
     <button type="button" className="item-card" onClick={onClick}>
@@ -46,6 +68,13 @@ export function RecommendationCard({
           />
         ) : (
           <div className="item-card__poster item-card__poster--placeholder">🎬</div>
+        )}
+        {watchlistStatus && (
+          <span
+            className={`item-card__status-badge item-card__status-badge--rec-${watchlistStatus}`}
+          >
+            {WATCHLIST_STATUS_LABEL[watchlistStatus]}
+          </span>
         )}
         {isNew && <span className="item-card__new-badge">NEW</span>}
       </div>

@@ -26,6 +26,15 @@ export function ItemCard({ item, onClick, eager }: ItemCardProps) {
     item.status === "want_to_watch" &&
     getReleaseAvailability(item.releaseDate) === "upcoming";
 
+  // Want to Watch is the implied default status everywhere this card's
+  // status badge could otherwise say it (Movies/TV Shows' "See all" is the
+  // only place ItemCard ever renders a want_to_watch item), so the badge
+  // itself is redundant there — the recommendation badge (if any) takes
+  // over its bottom-left slot instead, rather than the two badges
+  // occupying separate corners. Watching/Watched keep both badges exactly
+  // as before.
+  const useStatusSlotForRecBadge = item.status === "want_to_watch";
+
   return (
     <button type="button" className="item-card" onClick={onClick}>
       <div className="item-card__poster-wrap">
@@ -42,18 +51,26 @@ export function ItemCard({ item, onClick, eager }: ItemCardProps) {
             🎬
           </div>
         )}
-        <span
-          className={`item-card__status-badge item-card__status-badge--${item.status}`}
-        >
-          {STATUS_LABEL[item.status]}
-        </span>
+        {!useStatusSlotForRecBadge && (
+          <span
+            className={`item-card__status-badge item-card__status-badge--${item.status}`}
+          >
+            {STATUS_LABEL[item.status]}
+          </span>
+        )}
         {item.isRecommendation &&
           (item.recommendedBy ? (
-            <span className="item-card__recommender-badge" title={`Recommended by ${item.recommendedBy}`}>
+            <span
+              className={`item-card__recommender-badge${useStatusSlotForRecBadge ? " item-card__recommender-badge--status-slot" : ""}`}
+              title={`Recommended by ${item.recommendedBy}`}
+            >
               From {item.recommendedBy}
             </span>
           ) : (
-            <span className="item-card__rec-badge" title="Recommended">
+            <span
+              className={`item-card__rec-badge${useStatusSlotForRecBadge ? " item-card__rec-badge--status-slot" : ""}`}
+              title="Recommended"
+            >
               ★ Rec
             </span>
           ))}
