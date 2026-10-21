@@ -47,7 +47,7 @@ jobs:
           fi
 
           # A 200 with an empty array would mean the row is missing or not
-          # readable — don't count that as success.
+          # readable - don't count that as success.
           if ! jq -e 'length == 1 and .[0].id == 1' body.json > /dev/null; then
             echo "::error::Unexpected response body (keepalive row not found)."
             cat body.json

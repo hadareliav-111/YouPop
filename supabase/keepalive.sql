@@ -3,7 +3,7 @@
 -- GitHub Action in .github/workflows/supabase-keepalive.yml reads the single
 -- row below every few days so the project always sees recent API traffic.
 --
--- The table holds no user data — just one fixed row — and is the ONLY thing
+-- The table holds no user data - just one fixed row - and is the ONLY thing
 -- this file opens up: the anon role gets SELECT on this table alone. Nothing
 -- here touches the grants or policies of any other table.
 -- Undo with supabase/keepalive_rollback.sql.
