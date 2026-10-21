@@ -1,0 +1,65 @@
+# Keeps the Supabase project from being paused for inactivity by reading the
+# single row of public.keepalive (see supabase/keepalive.sql) every 3 days.
+name: Supabase keepalive
+
+on:
+  schedule:
+    - cron: "17 6 */3 * *"
+  workflow_dispatch:
+
+permissions:
+  # Needed only for the "re-enable" step below.
+  actions: write
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read keepalive row
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_ANON_KEY secrets must both be set."
+            exit 1
+          fi
+
+          url="${SUPABASE_URL%/}/rest/v1/keepalive?select=id,note&id=eq.1"
+          status=$(curl --silent --show-error \
+            --retry 3 --retry-delay 10 --retry-all-errors --max-time 30 \
+            --output body.json --write-out '%{http_code}' \
+            --header "apikey: ${SUPABASE_ANON_KEY}" \
+            --header "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            "$url") || { echo "::error::Request to Supabase failed."; exit 1; }
+
+          echo "HTTP $status"
+          if [ "$status" != "200" ]; then
+            echo "::error::Expected HTTP 200, got $status."
+            cat body.json
+            exit 1
+          fi
+
+          # A 200 with an empty array would mean the row is missing or not
+          # readable — don't count that as success.
+          if ! jq -e 'length == 1 and .[0].id == 1' body.json > /dev/null; then
+            echo "::error::Unexpected response body (keepalive row not found)."
+            cat body.json
+            exit 1
+          fi
+          echo "Keepalive row read successfully."
+
+      # GitHub disables scheduled workflows after 60 days without repository
+      # activity. Re-enabling the workflow through the API on every run resets
+      # that timer, without needing dummy commits.
+      - name: Keep this scheduled workflow enabled
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method PUT "repos/${{ github.repository }}/actions/workflows/supabase-keepalive.yml/enable"
